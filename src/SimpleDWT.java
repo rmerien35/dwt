@@ -25,17 +25,17 @@ public class SimpleDWT {
 
 	float[][] dwtTemp;
 
-	double[][] C = new double[N][N];
-	double[][] Ct = new double[N][N];
-	double[][] temp = new double[N][N];
+	float[][] C = new float[N][N];
+	float[][] Ct = new float[N][N];
+	float[][] temp = new float[N][N];
 
-	int[][] inputY = new int[N][N];
-	int[][] inputCr = new int[N][N];
-	int[][] inputCb = new int[N][N];
+	float[][] inputY = new float[N][N];
+	float[][] inputCr = new float[N][N];
+	float[][] inputCb = new float[N][N];
 
-	int[][] outputY = new int[N][N];
-	int[][] outputCr = new int[N][N];
-	int[][] outputCb = new int[N][N];
+	float[][] outputY = new float[N][N];
+	float[][] outputCr = new float[N][N];
+	float[][] outputCb = new float[N][N];
 
 
 	public void SimpleDWT() {
@@ -88,7 +88,7 @@ public class SimpleDWT {
 
 	// ----------------------------------------------------------------------------------------------------
 
-	double[][] quantumY =
+	float[][] quantumY =
 	{
 		{ 15, 10, 10, 10, 10, 10, 10, 10 },
 		{ 10, 10, 10, 10, 10, 10, 10, 10 },
@@ -100,7 +100,7 @@ public class SimpleDWT {
 		{ 10, 10, 10, 10, 10, 10, 10, 10 }
 	};
 
-	double[][] quantumCrCb =
+	float[][] quantumCrCb =
 	{
 		{ 15, 10, 10, 10, 10, 10, 10, 10 },
 		{ 10, 10, 10, 10, 10, 10, 10, 10 },
@@ -151,7 +151,7 @@ public class SimpleDWT {
 
 		for (j = 0; j < N; j++) {
 
-			C[0][j] = 1.0 / Math.sqrt(N);
+			C[0][j] = (float) (1.0f / Math.sqrt(N));
 			Ct[j][0] = C[0][j];
 
 		}
@@ -159,7 +159,7 @@ public class SimpleDWT {
 		for (i = 1; i < N; i++) {
 			for (j = 0; j < N; j++) {
 
-				C[i][j] = Math.sqrt(2.0 / N) * Math.cos(((2 * j + 1) * i * Math.PI) / (2.0 * N));
+				C[i][j] = (float) (Math.sqrt(2.0f / N) * Math.cos(((2 * j + 1) * i * Math.PI) / (2.0f * N)));
 				Ct[j][i] = C[i][j];
 
 			}
@@ -181,25 +181,25 @@ public class SimpleDWT {
 	* input byte from -128 to +127
 	*/
 
-	public void forwardDCT(int[][] image, int[][] DCT)
+	public void forwardDCT(float[][] image, float[][] DCT)
 	{
 		int i, j, k;
 
 		for (i = 0; i < N; i++) {
 			for (j = 0; j < N; j++) {
 
-				temp[i][j] = 0.0;
+				temp[i][j] = 0.0f;
 				for (k = 0; k < N; k++) temp[i][j] += image[i][k] * Ct[k][j];
 
 			}
 		}
 
-		double vtemp;
+		float vtemp;
 
 		for (i = 0; i < N; i++) {
 			for (j = 0; j < N; j++)	{
 
-				vtemp = 0.0;
+				vtemp = 0.0f;
 				for (k = 0; k < N; k++)	vtemp += C[i][k] * temp[k][j];
 
 				DCT[i][j] = (int) Math.round(vtemp);
@@ -296,15 +296,15 @@ public class SimpleDWT {
 	*
 	*/
 
-	public void inverseDCT(int[][] DCT, int[][] IDCT)
+	public void inverseDCT(float[][] DCT, float[][] IDCT)
 	{
 		int i, j, k;
-		double vtemp;
+		float vtemp;
 
 		for (i = 0; i < N; i++) {
 			for (j = 0; j < N; j++) {
 
-				temp[i][j] = 0.0;
+				temp[i][j] = 0.0f;
 				for (k = 0; k < N; k++) temp[i][j] += DCT[i][k] * C[k][j];
 
 			}
@@ -313,13 +313,15 @@ public class SimpleDWT {
 		for (i = 0; i < N; i++) {
 			for (j = 0; j < N; j++) {
 
-				vtemp = 0.0;
+				vtemp = 0.0f;
 				for (k = 0; k < N; k++)	vtemp += Ct[i][k] * temp[k][j];
 
 				// output byte from -128 to +127
 				if (vtemp < -128) 		IDCT[i][j] = -128;
 				else if (vtemp > 127) 	IDCT[i][j] = 127;
-				else							IDCT[i][j] = (int) Math.round(vtemp);
+				else					IDCT[i][j] = (int) Math.round(vtemp);
+				
+				//IDCT[i][j] = vtemp; 
 
 			}
 		}
@@ -425,7 +427,8 @@ public class SimpleDWT {
 
 			initialyze();
 
-			int blue, green, red, y, cb, cr;
+			int blue, green, red;
+			float y, cb, cr;
 
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
@@ -434,125 +437,40 @@ public class SimpleDWT {
 					green = bis.readBit(8);
 					red = bis.readBit(8);
 
-					y = (int) (0.299 * red + 0.587 * green + 0.114 * blue);
-					cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
-					cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
+					y =  (float) (0.299 * red + 0.587 * green + 0.114 * blue);
+					cb = (float) (-0.1687 * red - 0.3313 * green + 0.5 * blue) +128; // cb = (float) (0.564*(blue - y));
+					cr = (float) (0.5 * red - 0.4187 * green - 0.0813 * blue) +128; // cr = (float) (0.713*(red - y));
 
-					imageY[row][col] = y - 128;
-					imageCr[row][col] = cr;
-					imageCb[row][col] = cb;
+					imageY[row][col] = y- 128.0f;
+					imageCr[row][col] = cr - 128.0f ;
+					imageCb[row][col] = cb -128.0f ;
 
 				}
 			}
 
-			//exportBMP_YCrCb("testYCrCb");
-			//importBMP_YCrCb("testYCrCb");
-			//exportBMP_RGB("test_bis");
-
-			//exportBMP_RGB("compress"+String.valueOf(0));
+			exportBMP_YCrCb("YCrCb_before");
+			exportBMP_RGB("compress"+String.valueOf(0));
 			for (i=1; i<=16; i = 2*i) {
 				forwardDWT(imageY, i);
 				forwardDWT(imageCr, i);
 				forwardDWT(imageCb, i);
-				//exportBMP_RGB("compress"+String.valueOf(i));
-			}
-
-			for (row = 0; row < ROWS; row ++) {
-				for (col = 0; col < COLS; col ++) {
-					imageY[row][col] = (int) Math.round(imageY[row][col]);
-					imageCr[row][col] = (int) Math.round(imageCr[row][col]);
-					imageCb[row][col] = (int) Math.round(imageCb[row][col]);
-				}
+				
+				exportBMP_RGB("compress"+String.valueOf(i));
 			}
 
 			exportBMP_YCrCb("compress16YCrCb");
 
-/*
-
-		for (row = 0; row < ROWS; row ++) {
-			for (col = 0; col < COLS; col ++) {
-				imageY[row][col] = (int) (new Float(4*imageY[row][col])).intValue();
-				imageCr[row][col] = (int) (new Float(4*imageCr[row][col])).intValue();
-				imageCb[row][col] = (int) (new Float(4*imageCb[row][col])).intValue();
-			}
-		}
-*/
-/*
-		float _y, _cr, _cb;
-		float _ymin =0, _crmin =0, _cbmin =0;
-		float _ymax =0, _crmax= 0, _cbmax =0;
-		for (row = ROWS - 1; row >= 0; row--) {
-			for (col = 0; col < COLS; col++) {
-
-				_y = imageY[row][col];
-				_cr = imageCr[row][col];
-				_cb = imageCb[row][col];
-
-				if (_y<_ymin) _ymin = _y;
-				if (_cr<_crmin) _crmin = _cr;
-				if (_cb<_cbmin) _cbmin = _cb;
-
-				if (_y>_ymax) _ymax = _y;
-				if (_cr>_crmax) _crmax = _cr;
-				if (_cb>_cbmax) _cbmax = _cb;
-
-				//Float Fy = new Float(_y);
-				//Float Fcr = new Float(_cr);
-				//Float Fcb = new Float(_cb);
-
-				//Float Fy_int = new Float(Fy.intValue());
-				//Float Fcr_int = new Float(Fcr.intValue());
-				//Float Fcb_int = new Float(Fcb.intValue());
-
-				//if (!Fy.equals(Fy_int)) System.out.println("y ="+ Fy);
-				//if (!Fcr.equals(Fcr_int)) System.out.println("cr ="+ Fcr);
-				//if (!Fcb.equals(Fcb_int)) System.out.println("cb ="+ Fcb);
-
-			}
-	}
-
-System.out.println("ymin="+ _ymin + " ymax=" + _ymax);
-System.out.println("crmin="+ _crmin + " crmax=" + _crmax);
-System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
-*/
-
-//			importBMP_YCrCb("compressYCrCb16.bmp");
-/*
-_ymin =0; _crmin =0; _cbmin =0;
-_ymax =0; _crmax= 0; _cbmax =0;
-for (row = ROWS - 1; row >= 0; row--) {
-	for (col = 0; col < COLS; col++) {
-
-		_y = imageY[row][col];
-		_cr = imageCr[row][col];
-		_cb = imageCb[row][col];
-
-		if (_y<_ymin) _ymin = _y;
-		if (_cr<_crmin) _crmin = _cr;
-		if (_cb<_cbmin) _cbmin = _cb;
-
-		if (_y>_ymax) _ymax = _y;
-		if (_cr>_crmax) _crmax = _cr;
-		if (_cb>_cbmax) _cbmax = _cb;
-	}
-}
-
-System.out.println("ymin="+ _ymin + " ymax=" + _ymax);
-System.out.println("crmin="+ _crmin + " crmax=" + _crmax);
-System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
-*/
-
 			DCT trans = new DCT();
 
 			trans.compressFile("compress16YCrCb.bmp", inFile+".dwt");
-
 			trans.expandFile(inFile+".dwt", "expand16YCrCb.bmp");
-	
 			importBMP_YCrCb("expand16YCrCb");
+			importBMP_YCrCb("compress16YCrCb");
+
 
 
 			for (i=16; i>=1; i = i/2) {
-				//exportBMP_RGB("expand"+String.valueOf(i));
+				exportBMP_RGB("expand"+String.valueOf(i));
 				inverseDWT(imageY, i);
 				inverseDWT(imageCr, i);
 				inverseDWT(imageCb, i);
@@ -560,66 +478,7 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 			exportBMP_RGB("expand"+String.valueOf(i));
 
 
-/*
-			for (row = 0; row < ROWS; row += N) {
-				for (col = 0; col < COLS; col += N) {
 
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-							inputY[i][j] = (int) imageY[row + i][col + j];
-							inputCr[i][j] = (int) imageCr[row + i][col + j];
-							inputCb[i][j] = (int) imageCb[row + i][col + j];
-						}
-					}
-
-
-					forwardDCT(inputY, outputY);
-
-					forwardDCT(inputCr, outputCr);
-
-					forwardDCT(inputCb, outputCb);
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						//System.out.print("y ="+ outputY[i][j] +" ");
-						outputY[i][j] = (int) Math.round(outputY[i][j] / quantumY[i][j]);
-
-						//if (outputY[i][j] > 1024) System.out.println("y ="+ outputY[i][j]);
-						bos.writeBit(outputY[i][j] + 1024, 11);
-					}
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						outputCr[i][j] = (int) Math.round(outputCr[i][j] / quantumCrCb[i][j]);
-
-						//if (outputCr[i][j] > 1024) System.out.println("cr ="+ outputCr[i][j]);
-						bos.writeBit(outputCr[i][j] + 1024, 11);
-					}
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						outputCb[i][j] = (int) Math.round(outputCb[i][j] / quantumCrCb[i][j]);
-
-						//if (outputCb[i][j] > 1024) System.out.println("cb ="+ outputCb[i][j]);
-						bos.writeBit(outputCb[i][j] + 1024, 11);
-					}
-
-				}
-			}
-
-			bis.close();
-
-			bos.writeEOF();
-
-			bos.flush();
-		} catch (EOFException e) {
-			System.out.println(e);
-		} catch (IOException e) {
-			System.out.println("compressFile :" + e);
-*/
 		} catch (Exception e) {
 			System.out.println(e);
 		}
@@ -683,7 +542,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 
 			initialyze();
 
-			int blue, green, red, y, cb, cr;
+			int blue, green, red;
+			double y, cb, cr;
 
 			for (row = 0; row < ROWS; row += N) {
 				for (col = 0; col < COLS; col += N) {
@@ -693,8 +553,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 						i = zigzag(k).col;
 						j = zigzag(k).row;
 
-						inputY[i][j] = bis.readBit(11) - 1024;
-						inputY[i][j] = (int) Math.round(inputY[i][j] * quantumY[i][j]);
+						inputY[i][j] = (float) (bis.readBit(11) - 1024);
+						inputY[i][j] = (float) (inputY[i][j] * quantumY[i][j]);
 					}
 
 					inverseDCT(inputY, outputY);
@@ -709,8 +569,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 						i = zigzag(k).col;
 						j = zigzag(k).row;
 
-						inputCr[i][j] = bis.readBit(11) - 1024;
-						inputCr[i][j] = (int) Math.round(inputCr[i][j] * quantumCrCb[i][j]);
+						inputCr[i][j] = (float) (bis.readBit(11) - 1024);
+						inputCr[i][j] = (float) (inputCr[i][j] * quantumCrCb[i][j]);
 					}
 
 					inverseDCT(inputCr, outputCr);
@@ -725,8 +585,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 						i = zigzag(k).col;
 						j = zigzag(k).row;
 
-						inputCb[i][j] = bis.readBit(11) - 1024;
-						inputCb[i][j] = (int) Math.round(inputCb[i][j] * quantumCrCb[i][j]);
+						inputCb[i][j] = (float) (bis.readBit(11) - 1024);
+						inputCb[i][j] = (float) (inputCb[i][j] * quantumCrCb[i][j]);
 					}
 
 					inverseDCT(inputCb, outputCb);
@@ -759,11 +619,11 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
 
-					y = (int) imageY[row][col] + 128;
-					cr = (int) imageCr[row][col];
-					cb = (int) imageCb[row][col];
+					y = (float) imageY[row][col] + 128.0f;
+					cr = (float) imageCr[row][col];
+					cb = (float) imageCb[row][col];
 
-					blue = round_byte(y + 1.773 * cb);
+					blue = round_byte(y + 1.772 * cb);
 					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
 					red = round_byte(y + 1.402 * cr);
 
@@ -784,7 +644,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 	public void exportBMP_YCrCb(String name) throws Exception
 	{
 		int row, col;
-		int blue, green, red, y, cb, cr;
+		//int blue, green, red;
+		int y, cb, cr;
 
 		FileOutputStream fos = new FileOutputStream(name + ".bmp");
 		BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
@@ -821,9 +682,9 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 		for (row = ROWS - 1; row >= 0; row--) {
 			for (col = 0; col < COLS; col++) {
 
-				y = (int) imageY[row][col]+ 128;
-				cr = (int) imageCr[row][col]+ 128;
-				cb = (int) imageCb[row][col]+ 128;
+				y = round_byte(imageY[row][col]+ 128.0f);
+				cr = round_byte(imageCr[row][col]+ 128.0f);
+				cb = round_byte(imageCb[row][col]+ 128.0f);
 
 				bos.writeBit(y, 8);
 				bos.writeBit(cr, 8);
@@ -839,7 +700,8 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 	public void exportBMP_RGB(String name) throws Exception
 	{
 		int row, col;
-		int blue, green, red, y, cb, cr;
+		int blue, green, red;
+		double y, cb, cr;
 
 		FileOutputStream fos = new FileOutputStream(name + ".bmp");
 		BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
@@ -876,11 +738,11 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 		for (row = ROWS - 1; row >= 0; row--) {
 			for (col = 0; col < COLS; col++) {
 
-				y = (int) imageY[row][col] + 128;
-				cr = (int) imageCr[row][col];
-				cb = (int) imageCb[row][col];
+				y = (float) imageY[row][col] + 128.0f;
+				cr = (float) imageCr[row][col] ;
+				cb = (float) imageCb[row][col] ;
 
-				blue = round_byte(y + 1.773 * cb);
+				blue = round_byte(y + 1.772 * cb);
 				green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
 				red = round_byte(y + 1.402 * cr);
 
@@ -926,31 +788,10 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 		p = bis.readBit(32); // parameters (4 bytes)
 		p = bis.readBit(32); // parameters (4 bytes)
 
-/*
-		imageY = new float[ROWS][COLS];
-		imageCr = new float[ROWS][COLS];
-		imageCb = new float[ROWS][COLS];
-*/
-		int blue, green, red, y, cb, cr;
+		//int blue, green, red; 
+		int y, cb, cr;
 
-/*
-		for (row = ROWS - 1; row >= 0; row--) {
-			for (col = 0; col < COLS; col++) {
 
-				blue = bis.readBit(8);
-				green = bis.readBit(8);
-				red = bis.readBit(8);
-
-				y = (int) (0.299 * red + 0.587 * green + 0.114 * blue);
-				cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
-				cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
-
-				imageY[row][col] = y - 128;
-				imageCr[row][col] = cr;
-				imageCb[row][col] = cb;
-			}
-		}
-*/
 		for (row = ROWS - 1; row >= 0; row--) {
 			for (col = 0; col < COLS; col++) {
 
@@ -958,9 +799,9 @@ System.out.println("cbmin="+ _cbmin + " cbmax=" + _cbmax);
 				cr = bis.readBit(8);
 				cb = bis.readBit(8);
 
-				imageY[row][col] = y-128;
-				imageCr[row][col] = cr -128;
-				imageCb[row][col] = cb -128;
+				imageY[row][col] = (float) y-128.0f;
+				imageCr[row][col] = (float) cr-128.0f;
+				imageCb[row][col] = (float) cb-128.0f;
 			}
 		}
 

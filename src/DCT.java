@@ -497,7 +497,7 @@ public class DCT {
 
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
-/*
+
 					blue = bis.readBit(8);
 					green = bis.readBit(8);
 					red = bis.readBit(8);
@@ -509,15 +509,6 @@ public class DCT {
 					imageY[row][col] = y - 128;
 					imageCr[row][col] = cr;
 					imageCb[row][col] = cb;
-*/
-
-					y = bis.readBit(8);
-					cr = bis.readBit(8);
-					cb = bis.readBit(8);
-
-					imageY[row][col] = y-128;
-					imageCr[row][col] = cr -128;
-					imageCb[row][col] = cb -128;
 
 				}
 			}
@@ -528,16 +519,10 @@ public class DCT {
 					for (i = 0; i < N; i++) {
 						for (j = 0; j < N; j++) {
 							inputY[i][j] = imageY[row + i][col + j];
-							inputCr[i][j] = imageCr[row + i][col + j];
-							inputCb[i][j] = imageCb[row + i][col + j];
 						}
 					}
 
 					forwardDCT(inputY, outputY);
-
-					forwardDCT(inputCr, outputCr);
-
-					forwardDCT(inputCb, outputCb);
 
 	
 					for (k = 0; k < N * N; k++) {
@@ -550,6 +535,31 @@ public class DCT {
 							encodingDC = true;
 						outputCode(bos, outputY[i][j]);
 					}
+				}
+			}
+
+			for (row = 0; row < ROWS; row += 2 * N) {
+				for (col = 0; col < COLS; col += 2 * N) {
+
+					for (i = 0; i < N; i++) {
+						for (j = 0; j < N; j++) {
+
+							inputCr[i][j] = (int) ((imageCr[row	+ 2*i][col + 2*j] 
+									+ imageCr[row + 2*i + 1][col + 2*j]
+									+ imageCr[row + 2*i][col + 2*j + 1] 
+									+ imageCr[row + 2*i + 1][col + 2*j+ 1]) / 4);
+
+							inputCb[i][j] = (int) ((imageCb[row	+ 2*i][col + 2*j] 
+									+ imageCb[row + 2*i + 1][col + 2*j]	
+									+ imageCb[row + 2*i][col + 2*j + 1]	
+									+ imageCb[row + 2*i + 1][col + 2*j + 1]) / 4);
+
+						}
+					}
+
+					forwardDCT(inputCr, outputCr);
+
+					forwardDCT(inputCb, outputCb);
 
 					for (k = 0; k < N * N; k++) {
 						i = zigzag(k).col;
@@ -568,6 +578,7 @@ public class DCT {
 						if (k == 0)	encodingDC = true;
 						outputCode(bos, outputCb[i][j]);
 					}
+
 				}
 			}
 	
@@ -946,6 +957,15 @@ public class DCT {
 			for (row = 0; row < ROWS; row += N) {
 				for (col = 0; col < COLS; col += N) {
 
+					/*
+					for (i=0; i<N ; i++) {
+						for (j=0; j<N ; j++) {
+							inputY[i][j] = bis.readBit(11) - 1024;
+							inputY[i][j] = (int) Math.round(inputY[i][j] * quantumY[i][j]);
+						}
+					}
+					*/
+
 					for (k = 0; k < N * N; k++) {
 						i = zigzag(k).col;
 						j = zigzag(k).row;
@@ -954,6 +974,19 @@ public class DCT {
 						inputY[i][j] = inputCode(bis);
 						inputY[i][j] = (int) Math.round(inputY[i][j] * quantumY[i][j]);
 					}
+
+					inverseDCT(inputY, outputY);
+
+					for (i = 0; i < N; i++) {
+						for (j = 0; j < N; j++) {
+							imageY[row + i][col + j] = outputY[i][j];
+						}
+					}
+				}
+			}
+
+			for (row = 0; row < ROWS; row += 2 * N) {
+				for (col = 0; col < COLS; col += 2 * N) {
 
 					for (k = 0; k < N * N; k++) {
 						i = zigzag(k).col;
@@ -974,27 +1007,23 @@ public class DCT {
 						inputCb[i][j] = (int) Math.round(inputCb[i][j] * quantumCrCb[i][j]);
 					}
 
-					inverseDCT(inputY, outputY);
-
 					inverseDCT(inputCr, outputCr);
 
 					inverseDCT(inputCb, outputCb);
 
 					for (i = 0; i < N; i++) {
 						for (j = 0; j < N; j++) {
-							imageY[row + i][col + j] = outputY[i][j];
-						}
-					}
-				
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-							imageCr[row + i][col + j] = outputCr[i][j];
-						}
-					}
 
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-							imageCb[row + i][col + j] = outputCb[i][j];
+							imageCr[row + 2 * i][col + 2 * j] = outputCr[i][j];
+							imageCr[row + 2 * i][col + 2 * j + 1] = outputCr[i][j];
+							imageCr[row + 2 * i + 1][col + 2 * j] = outputCr[i][j];
+							imageCr[row + 2 * i + 1][col + 2 * j + 1] = outputCr[i][j];
+
+							imageCb[row + 2 * i][col + 2 * j] = outputCb[i][j];
+							imageCb[row + 2 * i][col + 2 * j + 1] = outputCb[i][j];
+							imageCb[row + 2 * i + 1][col + 2 * j] = outputCb[i][j];
+							imageCb[row + 2 * i + 1][col + 2 * j + 1] = outputCb[i][j];
+
 						}
 					}
 				}
@@ -1002,7 +1031,7 @@ public class DCT {
 
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
-/*
+
 					y = imageY[row][col] + 128;
 					cr = imageCr[row][col];
 					cb = imageCb[row][col];
@@ -1014,14 +1043,6 @@ public class DCT {
 					bos.writeBit(blue, 8);
 					bos.writeBit(green, 8);
 					bos.writeBit(red, 8);
-*/
-				y = (int) imageY[row][col]+ 128;
-				cr = (int) imageCr[row][col]+ 128;
-				cb = (int) imageCb[row][col]+ 128;
-
-				bos.writeBit(y, 8);
-				bos.writeBit(cr, 8);
-				bos.writeBit(cb, 8);
 				}
 			}
 
@@ -1040,7 +1061,8 @@ public class DCT {
 	public void exportBMP_RGB(String name) throws Exception
 	{
 		int row, col;
-		int blue, green, red, y, cb, cr;
+		int blue, green, red;
+		float y, cb, cr;
 
 		FileOutputStream fos = new FileOutputStream(name + ".bmp");
 		BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
@@ -1076,14 +1098,16 @@ public class DCT {
 
 		for (row = ROWS - 1; row >= 0; row--) {
 			for (col = 0; col < COLS; col++) {
-
-				y = (int) imageY[row][col] + 128;
-				cr = (int) imageCr[row][col];
-				cb = (int) imageCb[row][col];
-
-				blue = round_byte(y + 1.773 * cb);
-				green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
-				red = round_byte(y + 1.402 * cr);
+			
+				y = (float) (imageY[row][col] + 128.0f);
+				//cr = (float) (imageCr[row][col] - 32.0f);
+				//cb = (float) (imageCb[row][col] - 16.0f);
+				cr = (float) (imageCr[row][col] );
+				cb = (float) (imageCb[row][col] );
+	
+				blue = round_byte(y + 1.772f * cb);
+				green = round_byte(y - 0.34414f * cb - 0.71414f * cr);
+				red = round_byte(y + 1.402f * cr);
 
 				bos.writeBit(blue, 8);
 				bos.writeBit(green, 8);
