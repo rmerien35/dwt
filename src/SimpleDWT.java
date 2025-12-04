@@ -46,7 +46,7 @@ public class SimpleDWT {
 	static float[][] imageCr;
 	static float[][] imageCb;
 	
-	double[][] dwtTemp;
+	static double[][] dwtTemp;
 
 	float[][] C = new float[N][N];
 	float[][] Ct = new float[N][N];
@@ -322,10 +322,6 @@ public class SimpleDWT {
 
 			FileInputStream fis = new FileInputStream(inFile+".bmp");
 			BinaryInputStream bis = new BinaryInputStream(new BufferedInputStream(fis));
-			
-			//FileOutputStream fos = new FileOutputStream(outFile);
-			//BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
 
 			// Reading the input BMP imagefile
 			int p;
@@ -351,9 +347,8 @@ public class SimpleDWT {
 			p = bis.readBit(32); // parameters (4 bytes)
 			p = bis.readBit(32); // parameters (4 bytes)
 
-
-			//bos.writeBit(COLS, 16);
-			//bos.writeBit(ROWS, 16);
+			System.out.println("COLS="+COLS);
+			System.out.println("ROWS="+ROWS);
 
 			imageY = new float[ROWS][COLS];
 			imageCr = new float[ROWS][COLS];
@@ -390,8 +385,13 @@ public class SimpleDWT {
 		    // DWT FORWARD (5 niveaux, de i=1 à i=16)
 		    int i =1; // (i=1; i<=16; i = 2*i)
 		    for (int k = 0; k < 5; k++) {
+		    	
+		    	 System.out.println("i="+i);
+			     System.out.println("current_rows="+current_rows);
+			     System.out.println("current_cols="+current_cols);
 				
 				// Appliquer la DWT uniquement à la région LL courante
+			    System.out.println("forwardDWT_level");
 		        forwardDWT_level(imageY, current_rows, current_cols);
 		        forwardDWT_level(imageCr, current_rows, current_cols);
 		        forwardDWT_level(imageCb, current_rows, current_cols);
@@ -408,17 +408,17 @@ public class SimpleDWT {
 			quantizeAllSubbands();
 			
 			Huffman trans = new Huffman();
-			//trans.compressFile("compress16.bmp", inFile+".dwt");
-			//trans.expandFile(inFile+".dwt", "expandDCT.bmp");
-			
-			//trans.encodeFile("compress16.bmp", inFile+".dwt");
-			//trans.decodeFile(inFile+".dwt", "expandDCT.bmp");
-			
+			trans.compressFile(inFile+".dwt");
+/*			
+			trans.expandFile(inFile+".dwt");
+		
 			dequantizeAllSubbands();
 				
 			//importBMP_YCrCb(inFile+".dwt"); // Charge les matrice imageY, imageCr, imageCb
 
-
+			current_cols = COLS/32;
+			current_rows = ROWS/32;
+			
 			// DWT INVERSE (5 niveaux, de i=16 à i=1)
 			i=16; //i=16; i>=1; i = i/2
 			while (i >= 1) {
@@ -426,9 +426,14 @@ public class SimpleDWT {
 		        current_rows *= 2;
 		        current_cols *= 2;
 		        
+		    	System.out.println("i="+i);
+			    System.out.println("current_rows="+current_rows);
+			    System.out.println("current_cols="+current_cols);
+		        
 		        exportBMP_RGB("expand"+String.valueOf(i));
 		        	
 		        // Appliquer l'IDWT pour reconstruire la région LL précédente
+		        System.out.println("inverseDWT_level");
 		        inverseDWT_level(imageY, current_rows, current_cols);
 		        inverseDWT_level(imageCr, current_rows, current_cols);
 		        inverseDWT_level(imageCb, current_rows, current_cols);
@@ -436,10 +441,8 @@ public class SimpleDWT {
 		        i=i/2;
 		    }
 
-			
-			
 		    exportBMP_RGB("expand0");
-
+*/
 		} catch (Exception e) {
 			System.out.println(e);
 		}
@@ -451,76 +454,30 @@ public class SimpleDWT {
 	public void expandFile(String inFile) throws Exception {
 	//public void expandFile(String inFile, String outFile) throws Exception {
 		try {
-			FileInputStream fis = new FileInputStream(inFile+".dwt");
-			BinaryInputStream bis =	new BinaryInputStream(new BufferedInputStream(fis));
-
-			String outFile = inFile+".idwt.bmp";
-			FileOutputStream fos = new FileOutputStream(outFile);
-			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
-			byte b = 0;
-
-			COLS = bis.readBit(16);
-			ROWS = bis.readBit(16);
-
-			imageY = new float[ROWS][COLS];
-			imageCr = new float[ROWS][COLS];
-			imageCb = new float[ROWS][COLS];
-
-			dwtTemp = new double[ROWS][COLS];
-
-			// 14 bytes
-			bos.writeByte((byte) 'B');
-			bos.writeByte((byte) 'M');
-			bos.writeBit(COLS * ROWS * 3 + 54, 32); // BMP file length
-
-			bos.writeBit(0, 32); // Reserved
-			bos.writeByte((byte) 54); // Offset
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-
-			// 40 bytes
-			bos.writeBit(40, 32); // 40 bytes
-			bos.writeBit(COLS, 32); // largeur
-			bos.writeBit(ROWS, 32); // hauteur
-			bos.writeBit(1, 16);
-
-			bos.writeBit(24, 16); // bits by pixel
-
-			bos.writeBit(0, 32);
-
-			bos.writeBit(COLS * ROWS * 3, 32); // image size
-
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-
-			int row, col;
-			int blue, green, red;
-			float y, cb, cr;
 			
-			importBMP_YCrCb(inFile+".dwt"); // Charge les matrice imageY, imageCr, imageCb
-			
-			//DCT trans = new DCT();
-			//trans.expandFile(inFile+".dwt", "expandDCT.bmp");
+			Huffman trans = new Huffman();
+			trans.expandFile(inFile+".dwt");
 			
 			dequantizeAllSubbands();
 			
-			int current_cols = COLS/12;
-			int current_rows = ROWS/8;
+			int current_cols = COLS/32;
+			int current_rows = ROWS/32;
 		    
 			// DWT INVERSE (5 niveaux, de i=16 à i=1)
 			int i=16; //i=16; i>=1; i = i/2
-		    for (int k = 0; k < 5; k++) {
+			while (i >= 1) {
 		        // Réaugmenter la taille pour la reconstruction
 		        current_rows *= 2;
 		        current_cols *= 2;
 		        
+		        System.out.println("i="+i);
+		        System.out.println("current_rows="+current_rows);
+		        System.out.println("current_cols="+current_cols);
+		        
 		        exportBMP_RGB("expand"+String.valueOf(i));
 		        
 		        // Appliquer l'IDWT pour reconstruire la région LL précédente
+		        System.out.println("inverseDWT_level");
 		        inverseDWT_level(imageY, current_rows, current_cols);
 		        inverseDWT_level(imageCr, current_rows, current_cols);
 		        inverseDWT_level(imageCb, current_rows, current_cols);
@@ -528,30 +485,11 @@ public class SimpleDWT {
 		        i=i/2;
 		    }
 
+		    exportBMP_RGB(inFile+".idwt.bmp");
 			
-			for (row = ROWS - 1; row >= 0; row--) {
-				for (col = 0; col < COLS; col++) {
-
-					y = (float) imageY[row][col] + 128.0f;
-					cr = (float) imageCr[row][col];
-					cb = (float) imageCb[row][col];
-
-					blue = round_byte(y + 1.772 * cb);
-					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
-					red = round_byte(y + 1.402 * cr);
-
-					bos.writeBit(blue, 8);
-					bos.writeBit(green, 8);
-					bos.writeBit(red, 8);
-				}
-			}
-
-			bos.flush();
-			fos.close();
-			fis.close();
 		}
 		catch (EOFException e) {}
-		catch (IOException e) {System.out.println("expandFile :" + e);}
+		catch (IOException e) {System.out.println("expandFile :" + e.getStackTrace());}
 	}
 
 	/* Export a BMP image with YCrCb values

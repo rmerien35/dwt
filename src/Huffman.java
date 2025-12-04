@@ -13,8 +13,6 @@ import binary.*;
 public class Huffman {
 
 
-	static public int COLS = -1;
-	static public int ROWS = -1;
 	static public int N = 8;
 	static public double quality = 2;
 	
@@ -185,7 +183,7 @@ public class Huffman {
 	    // 1. LL5 : Lecture en Raster Scan (pour les coefficients DC/LL5)
 	    for (int r = 0; r < ll_rows; r++) {
 	        for (int c = 0; c < ll_cols; c++) {
-	            coeffs.add((int) Math.rint(image[r][c]));
+	            coeffs.add(Math.round(image[r][c]));
 	        }
 	    }
 
@@ -205,7 +203,7 @@ public class Huffman {
 	        // Région: [half_rows..size_rows-1] x [0..half_cols-1]
 	        for (int r = half_rows; r < size_rows; r++) {
 	            for (int c = 0; c < half_cols; c++) {
-	                coeffs.add((int) Math.rint(image[r][c]));
+	                coeffs.add(Math.round(image[r][c]));
 	            }
 	        }
 	        
@@ -213,7 +211,7 @@ public class Huffman {
 	        // Région: [0..half_rows-1] x [half_cols..size_cols-1]
 	        for (int r = 0; r < half_rows; r++) {
 	            for (int c = half_cols; c < size_cols; c++) {
-	                coeffs.add((int) Math.rint(image[r][c]));
+	            	coeffs.add(Math.round(image[r][c]));
 	            }
 	        }
 	        
@@ -221,7 +219,7 @@ public class Huffman {
 	        // Région: [half_rows..size_rows-1] x [half_cols..size_cols-1]
 	        for (int r = half_rows; r < size_rows; r++) {
 	            for (int c = half_cols; c < size_cols; c++) {
-	                coeffs.add((int) Math.rint(image[r][c]));
+	            	coeffs.add(Math.round(image[r][c]));
 	            }
 	        }
 	    }
@@ -290,6 +288,62 @@ public class Huffman {
 	            }
 	        }
 	    }
+	}
+	
+	private List<Integer> linearizeDWTWithZigzag(float[][] dwtCoefficients) {
+	    List<Integer> coeffs = new ArrayList<>();
+	    int rows = dwtCoefficients.length;
+	    int cols = dwtCoefficients[0].length;
+	    int maxLevel = 5;
+	    
+	    // LL5 - scan normal
+	    int llSize = rows / 32;
+	    for (int r = 0; r < llSize; r++) {
+	        for (int c = 0; c < llSize; c++) {
+	            coeffs.add(Math.round(dwtCoefficients[r][c]));
+	        }
+	    }
+	    
+	    // Pour chaque sous-bande de détail, utiliser zigzag
+	    for (int level = maxLevel; level >= 1; level--) {
+	        int blockSize = rows / (1 << level);
+	        
+	        // HL band
+	        coeffs.addAll(zigzagScan(dwtCoefficients, blockSize, 2*blockSize, 0, blockSize));
+	        
+	        // LH band  
+	        coeffs.addAll(zigzagScan(dwtCoefficients, 0, blockSize, blockSize, 2*blockSize));
+	        
+	        // HH band
+	        coeffs.addAll(zigzagScan(dwtCoefficients, blockSize, 2*blockSize, blockSize, 2*blockSize));
+	    }
+	    
+	    return coeffs;
+	}
+
+	private List<Integer> zigzagScan(float[][] matrix, int startRow, int endRow, 
+	                                 int startCol, int endCol) {
+	    List<Integer> scan = new ArrayList<>();
+	    int rows = endRow - startRow;
+	    int cols = endCol - startCol;
+	    int row = 0, col = 0;
+	    boolean up = true;
+	    
+	    for (int i = 0; i < rows * cols; i++) {
+	        scan.add(Math.round(matrix[startRow + row][startCol + col]));
+	        
+	        if (up) {
+	            if (col == cols - 1) { row++; up = false; }
+	            else if (row == 0) { col++; up = false; }
+	            else { row--; col++; }
+	        } else {
+	            if (row == rows - 1) { col++; up = true; }
+	            else if (col == 0) { row++; up = true; }
+	            else { row++; col--; }
+	        }
+	    }
+	    
+	    return scan;
 	}
 	
 	// ---------------------------------------------------------------------------------
@@ -385,13 +439,10 @@ public class Huffman {
 
 	// ---------------------------------------------------------------------------------
 	@SuppressWarnings("rawtypes")
-	public void compressFile(String inFile, String outFile) throws Exception {
+	public void compressFile(String outFile) throws Exception {
 		try {
 			int row, col, i, j, k;
 			
-			FileInputStream fis = new FileInputStream(inFile);
-			BinaryInputStream bis = new BinaryInputStream(new BufferedInputStream(fis));
-
 			FileOutputStream fos = new FileOutputStream(outFile);
 			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
 
@@ -405,58 +456,14 @@ public class Huffman {
 				tabStatistics_rle[i] = new BinaryTree(i, 0);
 			}
 
-			gen = new Vector(fis.available(), 100000);
+			gen = new Vector(100000, 100000);
 
-
-			// Reading the input BMP imagefile
-			int p;
-
-			// BitmapFileHeader (14 bytes)
-			
-			if ((bis.readByte() != (byte) 'B') || (bis.readByte() != (byte) 'M')) throw new Exception("Not a Bitmap file"); // header = 'BM' (2 bytes)
-			p = bis.readBit(32); // BMP file size (4 bytes)
-			p = bis.readBit(64); // Reserved & Offset (8 bytes)
-
-			// BitmapInfoHeader (40 bytes)
-
-			p = bis.readBit(32); // info header size = 40 (4 bytes)
-			COLS = bis.readBit(32); // width (4 bytes)
-			ROWS = bis.readBit(32); // height (4 bytes)
-			p = bis.readBit(16); // planes = 1 (2 bytes)
-			p = bis.readBit(16); // bitcount = 24 (2 bytes)
-			if (p != 24) throw new Exception("Not a 24bits Bitmap file");
-			p = bis.readBit(32); // compression = 0 (4 bytes)
-			p = bis.readBit(32); // image size (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-
-
-			bos.writeBit(COLS, 16);
-			bos.writeBit(ROWS, 16);
+			bos.writeBit(SimpleDWT.COLS, 16);
+			bos.writeBit(SimpleDWT.ROWS, 16);
+			//outputCodeFlush(bos);
 
 			int blue, green, red, y, cb, cr;
-		
-			
-			for (row = ROWS - 1; row >= 0; row--) {
-				for (col = 0; col < COLS; col++) {
-
-					blue = bis.readBit(8);
-					green = bis.readBit(8);
-					red = bis.readBit(8);
-
-					y = (int) (0.299 * red + 0.587 * green + 0.114 * blue);
-					cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
-					cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
 					
-					SimpleDWT.imageY[row][col] = y - 128;
-					SimpleDWT.imageCr[row][col] = cr;
-					SimpleDWT.imageCb[row][col] = cb;
-
-				}
-			}
-			
 			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
 			System.out.println("Encodage coefficientsY");
 			for (i = 0; i < coefficientsY.size(); i++) {
@@ -482,8 +489,6 @@ public class Huffman {
 			}
 			
 			outputCodeFlush(bos);
-
-			bis.close();
 
 			// build the vector
 			Vector list = new Vector();
@@ -721,140 +726,27 @@ public class Huffman {
 	}
 
 	
-	public void encodeFile(String inFile, String outFile) throws Exception {
-		try {
-			int row, col, i, j, k;
-			
-			FileInputStream fis = new FileInputStream(inFile);
-			BinaryInputStream bis = new BinaryInputStream(new BufferedInputStream(fis));
-
-			FileOutputStream fos = new FileOutputStream(outFile);
-			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
-			tabStatistics_len = new BinaryTree[len_max];
-			for (i = 0; i < len_max; i++) {
-				tabStatistics_len[i] = new BinaryTree(i, 0);
-			}
-
-			tabStatistics_rle = new BinaryTree[rle_max];
-			for (i = 0; i < rle_max; i++) {
-				tabStatistics_rle[i] = new BinaryTree(i, 0);
-			}
-
-			gen = new Vector(fis.available(), 100000);
-
-
-			// Reading the input BMP imagefile
-			int p;
-
-			// BitmapFileHeader (14 bytes)
-			
-			if ((bis.readByte() != (byte) 'B') || (bis.readByte() != (byte) 'M')) throw new Exception("Not a Bitmap file"); // header = 'BM' (2 bytes)
-			p = bis.readBit(32); // BMP file size (4 bytes)
-			p = bis.readBit(64); // Reserved & Offset (8 bytes)
-
-			// BitmapInfoHeader (40 bytes)
-
-			p = bis.readBit(32); // info header size = 40 (4 bytes)
-			COLS = bis.readBit(32); // width (4 bytes)
-			ROWS = bis.readBit(32); // height (4 bytes)
-			p = bis.readBit(16); // planes = 1 (2 bytes)
-			p = bis.readBit(16); // bitcount = 24 (2 bytes)
-			if (p != 24) throw new Exception("Not a 24bits Bitmap file");
-			p = bis.readBit(32); // compression = 0 (4 bytes)
-			p = bis.readBit(32); // image size (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-			p = bis.readBit(32); // parameters (4 bytes)
-
-
-			bos.writeBit(COLS, 16);
-			bos.writeBit(ROWS, 16);
-
-			SimpleDWT.imageY = new float[ROWS][COLS];
-			SimpleDWT.imageCr = new float[ROWS][COLS];
-			SimpleDWT.imageCb = new float[ROWS][COLS];
-
-			int blue, green, red, y, cb, cr;
-		
-			
-			for (row = ROWS - 1; row >= 0; row--) {
-				for (col = 0; col < COLS; col++) {
-
-					blue = bis.readBit(8);
-					green = bis.readBit(8);
-					red = bis.readBit(8);
-
-					y = (int) (0.299 * red + 0.587 * green + 0.114 * blue);
-					cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
-					cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
-					
-					SimpleDWT.imageY[row][col] = y - 128;
-					SimpleDWT.imageCr[row][col] = cr;
-					SimpleDWT.imageCb[row][col] = cb;
-
-				}
-			}
-			
-			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
-			System.out.println("Encodage coefficientsY");
-			for (i = 0; i < coefficientsY.size(); i++) {
-				if (i == 0) encodingDC = true;
-				Integer val_lue = coefficientsY.get(i);
-				//outputCode(bos, val_lue);
-				bos.writeBit(coefficientsY.get(i).byteValue());
-			}
-
-			System.out.println("Encodage coefficientsCr");
-			List<Integer> coefficientsCr = linearizeDWT(SimpleDWT.imageCr); 
-			for (i = 0; i < coefficientsCr.size(); i++) {
-				if (i == 0) encodingDC = true;
-				Integer val_lue = coefficientsCr.get(i);
-				//outputCode(bos, val_lue);
-				bos.writeBit(val_lue.byteValue());
-			}
-
-			System.out.println("Encodage coefficientsCb");
-			List<Integer> coefficientsCb = linearizeDWT(SimpleDWT.imageCb); 
-			for (i = 0; i < coefficientsCb.size(); i++) {
-				if (i == 0) encodingDC = true;
-				Integer val_lue = coefficientsCb.get(i);
-				//outputCode(bos, val_lue);
-				bos.writeBit(val_lue.byteValue());
-			}
-			
-			outputCodeFlush(bos);
-
-			bis.close();		
-			bos.writeEOF();
-
-			bos.flush();
-		} catch (EOFException e) {
-			System.out.println(e);
-		} catch (IOException e) {
-			System.out.println("compressFile :" + e);
-		}
-	}
+	
 	
 	// ---------------------------------------------------------------------------------
-	public void expandFile(String inFile, String outFile) throws Exception {
+	public void expandFile(String inFile) throws Exception {
 		try {
-			int row, col, i, j, k;
+			int i, k;
 
 			FileInputStream fis = new FileInputStream(inFile);
 			BinaryInputStream bis =	new BinaryInputStream(new BufferedInputStream(fis));
 
-			FileOutputStream fos = new FileOutputStream(outFile);
-			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
-			byte b = 0;
-
-			COLS = bis.readBit(16);	
-			ROWS = bis.readBit(16);
+			SimpleDWT.COLS = bis.readBit(16);	
+			SimpleDWT.ROWS = bis.readBit(16);
 			
-			//System.out.println("COLS="+COLS);
-			//System.out.println("ROWS="+ROWS);
+			System.out.println("COLS="+SimpleDWT.COLS);
+			System.out.println("ROWS="+SimpleDWT.ROWS);
+			
+			SimpleDWT.imageY = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
+			SimpleDWT.imageCr = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
+			SimpleDWT.imageCb = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
+			
+			SimpleDWT.dwtTemp = new double[SimpleDWT.ROWS][SimpleDWT.COLS];
 
 			// get statistics from input stream
 
@@ -941,45 +833,9 @@ public class Huffman {
 			
 			//System.out.println("expand tabStatistics_rle="+tabStatistics_rle.length);
 
-			SimpleDWT.imageY = new float[ROWS][COLS];
-			SimpleDWT.imageCr = new float[ROWS][COLS];
-			SimpleDWT.imageCb = new float[ROWS][COLS];
-
-			// 14 bytes
-			bos.writeByte((byte) 'B');
-			bos.writeByte((byte) 'M');
-			bos.writeBit(COLS * ROWS * 3 + 54, 32); // BMP file length
-
-			bos.writeBit(0, 32); // Reserved
-			bos.writeByte((byte) 54); // Offset
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-
-			// 40 bytes
-			bos.writeBit(40, 32); // 40 bytes
-			bos.writeBit(COLS, 32); // largeur
-			bos.writeBit(ROWS, 32); // hauteur
-			bos.writeBit(1, 16);
-
-
-			bos.writeBit(24, 16); // bits by pixel
-
-			bos.writeBit(0, 32);
-
-			bos.writeBit(COLS * ROWS * 3, 32); // image size
-
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-
-
-			int blue, green, red;
-			float y, cb, cr;
-			
-			List<Integer> coefficientsY = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
+			@SuppressWarnings("unchecked")
+			List<Integer> coefficientsY = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
+			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				
 				int val_lue = inputCode(bis);
@@ -987,42 +843,25 @@ public class Huffman {
 			}
 			unlinearizeDWT(coefficientsY, SimpleDWT.imageY);
 			
-			List<Integer> coefficientsCr = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
+			@SuppressWarnings("unchecked")
+			List<Integer> coefficientsCr = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
+			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				int val_lue = inputCode(bis);
 				coefficientsCr.add(k,val_lue);
 			}
 			unlinearizeDWT(coefficientsCr, SimpleDWT.imageCr);
 			
-			List<Integer> coefficientsCb = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
+			@SuppressWarnings("unchecked")
+			List<Integer> coefficientsCb = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
+			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				int val_lue = inputCode(bis);
 				coefficientsCb.add(k,val_lue);
 			}
 			unlinearizeDWT(coefficientsCb, SimpleDWT.imageCb);
 			
-	
-			for (row = ROWS - 1; row >= 0; row--) {
-				for (col = 0; col < COLS; col++) {
-
-					y = SimpleDWT.imageY[row][col] + 128;
-					cr = SimpleDWT.imageCr[row][col];
-					cb = SimpleDWT.imageCb[row][col];
-
-					blue = round_byte(y + 1.773 * cb);
-					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
-					red = round_byte(y + 1.402 * cr);
-
-					bos.writeBit(blue, 8);
-					bos.writeBit(green, 8);
-					bos.writeBit(red, 8);
-				}
-			}
-
-			bos.flush();
-			fos.close();
+			bis.close();
 			fis.close();
 		} 
 		catch (EOFException e) {}
@@ -1032,119 +871,7 @@ public class Huffman {
 	}
 
 	
-	public void decodeFile(String inFile, String outFile) throws Exception {
-		try {
-			int row, col, i, j, k;
-
-			FileInputStream fis = new FileInputStream(inFile);
-			BinaryInputStream bis =	new BinaryInputStream(new BufferedInputStream(fis));
-
-			FileOutputStream fos = new FileOutputStream(outFile);
-			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
-			byte b = 0;
-
-			COLS = bis.readBit(16);	
-			ROWS = bis.readBit(16);
-			
-			//System.out.println("COLS="+COLS);
-			//System.out.println("ROWS="+ROWS);
-
-			SimpleDWT.imageY = new float[ROWS][COLS];
-			SimpleDWT.imageCr = new float[ROWS][COLS];
-			SimpleDWT.imageCb = new float[ROWS][COLS];
-
-			// 14 bytes
-			bos.writeByte((byte) 'B');
-			bos.writeByte((byte) 'M');
-			bos.writeBit(COLS * ROWS * 3 + 54, 32); // BMP file length
-
-			bos.writeBit(0, 32); // Reserved
-			bos.writeByte((byte) 54); // Offset
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-			bos.writeByte((byte) 0);
-
-			// 40 bytes
-			bos.writeBit(40, 32); // 40 bytes
-			bos.writeBit(COLS, 32); // largeur
-			bos.writeBit(ROWS, 32); // hauteur
-			bos.writeBit(1, 16);
-
-
-			bos.writeBit(24, 16); // bits by pixel
-
-			bos.writeBit(0, 32);
-
-			bos.writeBit(COLS * ROWS * 3, 32); // image size
-
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-			bos.writeBit(0, 32);
-
-
-			int blue, green, red;
-			float y, cb, cr;
-			
-			List<Integer> coefficientsY = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
-				//if (k == 0) encodingDC = true;
-				//coefficientsY.add(k,inputCode(bis));
-				int val_lue = bis.readBit();
-				coefficientsY.add(k,val_lue);
-			}
-			unlinearizeDWT(coefficientsY, SimpleDWT.imageY);
-			
-			List<Integer> coefficientsCr = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
-				//if (k == 0) encodingDC = true;
-				//coefficientsCr.add(k,inputCode(bis));
-				int val_lue = bis.readBit();
-				coefficientsCr.add(k,val_lue);
-			}
-			unlinearizeDWT(coefficientsCr, SimpleDWT.imageCr);
-			
-			List<Integer> coefficientsCb = new ArrayList();
-			for(k=0; k<COLS * ROWS; k++ ) {
-				//if (k == 0) encodingDC = true;
-				//coefficientsCb.add(k,inputCode(bis));
-				int val_lue = bis.readBit();
-				coefficientsCb.add(k,val_lue);
-			}
-			unlinearizeDWT(coefficientsCb, SimpleDWT.imageCb);
-			
-			
 	
-			for (row = ROWS - 1; row >= 0; row--) {
-				for (col = 0; col < COLS; col++) {
-
-					y = SimpleDWT.imageY[row][col] + 128;
-					cr = SimpleDWT.imageCr[row][col];
-					cb = SimpleDWT.imageCb[row][col];
-
-					blue = round_byte(y + 1.773 * cb);
-					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
-					red = round_byte(y + 1.402 * cr);
-
-					bos.writeBit(blue, 8);
-					bos.writeBit(green, 8);
-					bos.writeBit(red, 8);
-				}
-			}
-
-			bos.flush();
-			fos.close();
-			fis.close();
-		} 
-		catch (EOFException e) {}
-		catch (IOException e) {System.out.println("expandFile :" + e);}
-
-		//exportBMP_RGB("RGB_"+outFile);
-	}
-	
-	// ---------------------------------------------------------------------------------
-
 
 // -------------------------------------------------------------------------------------------
 	public int reverse(int value, int size) 
