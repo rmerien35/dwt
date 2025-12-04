@@ -10,18 +10,14 @@ import binary.*;
 *	@author Ronan Merien <rmerien@hotmail.com>
 *
 */
-public class DCT {
+public class Huffman {
 
 
 	static public int COLS = -1;
 	static public int ROWS = -1;
 	static public int N = 8;
 	static public double quality = 2;
-
-	int[][] imageY;
-	int[][] imageCr;
-	int[][] imageCb;
-
+	
 	double[][] C = new double[N][N];
 	double[][] Ct = new double[N][N];
 	double[][] temp = new double[N][N];
@@ -56,9 +52,10 @@ public class DCT {
 	BinaryTree tree_len = new BinaryTree(-1, 0);
 	BinaryTree tree_rle = new BinaryTree(-1, 0);
 
+	@SuppressWarnings("rawtypes")
 	Vector gen;
 
-	public void DCT() {
+	public Huffman() {
 	}
 
 	protected int round_byte(double a) {
@@ -67,185 +64,6 @@ public class DCT {
 		else return (int) Math.round(a);
 	}
 
-	// ----------------------------------------------------------------------------------------------------
-
-	public class Pixel {
-		int col, row;
-
-		public Pixel(int i, int j) {
-			col = i;
-			row = j;
-		}
-	}
-
-	Pixel[] zigzag8 =
-	{
-			new Pixel(0, 0),
-			new Pixel(0, 1), new Pixel(1, 0),
-			new Pixel(2, 0), new Pixel(1, 1), new Pixel(0, 2),
-			new Pixel(0, 3), new Pixel(1, 2), new Pixel(2, 1), new Pixel(3, 0),
-			new Pixel(4, 0), new Pixel(3, 1), new Pixel(2, 2), new Pixel(1, 3), new Pixel(0, 4), 
-			new Pixel(0, 5), new Pixel(1, 4), new Pixel(2, 3), new Pixel(3, 2), new Pixel(4, 1), new Pixel(5, 0), 
-			new Pixel(6, 0), new Pixel(5, 1), new Pixel(4, 2), new Pixel(3, 3), new Pixel(2, 4), new Pixel(1, 5), new Pixel(0, 6),
-			new Pixel(0, 7), new Pixel(1, 6), new Pixel(2, 5), new Pixel(3, 4), new Pixel(4, 3), new Pixel(5, 2), new Pixel(6, 1), new Pixel(7, 0),
-			new Pixel(7, 1), new Pixel(6, 2), new Pixel(5, 3), new Pixel(4, 4), new Pixel(3, 5), new Pixel(2, 6), new Pixel(1, 7), 
-			new Pixel(2, 7), new Pixel(3, 6), new Pixel(4, 5), new Pixel(5, 4), new Pixel(6, 3), new Pixel(7, 2),
-			new Pixel(7, 3), new Pixel(6, 4), new Pixel(5, 5), new Pixel(4, 6), new Pixel(3, 7),
-			new Pixel(4, 7), new Pixel(5, 6), new Pixel(6, 5), new Pixel(7, 4),
-			new Pixel(7, 5), new Pixel(6, 6), new Pixel(5, 7),
-			new Pixel(6, 7), new Pixel(7, 6),
-			new Pixel(7, 7)
-	};
-
-	/** 
-	* zigzag sequence
-	*
-	*/
-
-	protected Pixel zigzag(int k) {
-		return zigzag8[k];
-	}
-
-	// ----------------------------------------------------------------------------------------------------
-
-	double[][] quantumY = 
-	{ 
-		{ 15, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }
-	};
-
-	double[][] quantumCrCb = 
-	{ 
-		{ 15, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }, 
-		{ 10, 10, 10, 10, 10, 10, 10, 10 }
-	};
-
-	/** 
-	* initialyze
-	*
-	* quantified_DCT[i][j] = DCT[i][j] / quantum[i][j]
-	*
-	* Cosinus Transform Matrix is C
-	* C Transposed Matrix is Ct
-	*/
-
-	public void initialyze() 
-	{
-		int i, j;
-
-		for (j = 0; j < N; j++) {
-
-			C[0][j] = 1.0 / Math.sqrt(N);
-			Ct[j][0] = C[0][j];
-
-		}
-
-		for (i = 1; i < N; i++) {
-			for (j = 0; j < N; j++) {
-
-				C[i][j] = Math.sqrt(2.0 / N) * Math.cos(((2 * j + 1) * i * Math.PI) / (2.0 * N));
-				Ct[j][i] = C[i][j];
-
-			}
-		}
-	}
-
-	// ----------------------------------------------------------------------------------------------------
-
-	/** 
-	* forwardDCT
-   *
-	* DCT[i][j] = (1/sqrt(2N)) C(x) C(y) SUM(x,0,N-1) SUM(y,0,N-1) pixel[x][y] cos((i*pi*(2x+1))/2N) cos((j*pi*(2y+1))/2N)
-	* C(0) = 1/sqrt(2) & C(x) = 1 if x>0
-	*
-   * DCT = C * image * Ct
-	* where temp = image * Ct
-	* and   DCT = C * temp
-	*	
-	* input byte from -128 to +127
-	*/
-
-	public void forwardDCT(int[][] image, int[][] DCT) 
-	{
-		int i, j, k;
-
-		for (i = 0; i < N; i++) {
-			for (j = 0; j < N; j++) {
-
-				temp[i][j] = 0.0;
-				for (k = 0; k < N; k++) temp[i][j] += image[i][k] * Ct[k][j];
-
-			}
-		}
-
-		double vtemp;
-
-		for (i = 0; i < N; i++) {
-			for (j = 0; j < N; j++)	{
-
-				vtemp = 0.0;
-				for (k = 0; k < N; k++)	vtemp += C[i][k] * temp[k][j];
-
-				DCT[i][j] = (int) Math.round(vtemp);
-
-			}
-		}
-	}
-
-	// ----------------------------------------------------------------------------------------------------
-
-	/** 
-	* inverseDCT
-	*
-	* IDCT[x][y] = (1/sqrt(2N)) SUM(i,0,N-1) SUM(j,0,N-1) C(i) C(j) DCT[i][j] cos((i*pi*(2x+1))/2N) cos((j*pi*(2y+1))/2N)
-	* C(0) = 1/sqrt(2) & C(x) = 1 if x>0
-	*
-	* IDCT = Ct * DCT * C
-	* where temp = image * C
-	* and IDCT = Ct * temp
-	*
-	*/
-
-	public void inverseDCT(int[][] DCT, int[][] IDCT)
-	{
-		int i, j, k;
-		double vtemp;
-
-		for (i = 0; i < N; i++) {
-			for (j = 0; j < N; j++) {
-
-				temp[i][j] = 0.0;
-				for (k = 0; k < N; k++) temp[i][j] += DCT[i][k] * C[k][j];
-
-			}
-		}
-
-		for (i = 0; i < N; i++) {
-			for (j = 0; j < N; j++) {
-
-				vtemp = 0.0;
-				for (k = 0; k < N; k++)	vtemp += Ct[i][k] * temp[k][j];
-
-				// output byte from -128 to +127
-				if (vtemp < -128) 		IDCT[i][j] = -128;
-				else if (vtemp > 127) 	IDCT[i][j] = 127;
-				else							IDCT[i][j] = (int) Math.round(vtemp);
-
-			}
-		}
-	}
 
 	// ----------------------------------------------------------------------------------------------------
 
@@ -295,8 +113,8 @@ public class DCT {
 				tabStatistics_len[code + 128].frequence++;
 				gen.addElement(new MatchLength(code + 128));
 				//System.out.println(code);
-			} else if ((code < 128) || (code > 127)) {
-				System.out.println("out of range " + code);
+			} else if ((code < -128) || (code > 127)) {
+				//System.out.println("out of range " + code);
 				tabStatistics_len[257].frequence++;
 				gen.addElement(
 					new MatchLength(257, code + 128 * N, (int) (10 + N / 8)));
@@ -343,7 +161,137 @@ public class DCT {
 			throw e;
 		}
 	}
+	
+	// ---------------------------------------------------------------------------------
+	
+	/**
+	 * Linéarise les coefficients DWT 2D en une séquence 1D 
+	 * dans l'ordre de la plus basse fréquence (LL5) vers la plus haute fréquence (LH1, HL1, HH1).
+	 *
+	 * @param image Matrice de coefficients quantifiés (float, mais contenant des entiers)
+	 * @return Une liste 1D de coefficients entiers.
+	 */
+	
+	private List<Integer> linearizeDWT(float[][] image) {
+	    List<Integer> coeffs = new ArrayList<>();
+	    int rows = image.length;
+	    int cols = image[0].length;
+	    int max_level = 5; // Assumant 5 niveaux de décomposition (LL5 est le plus petit)
 
+	    // --- A. Traitement du Bloc d'Approximation Final (LL5) - Inclus le DC ---
+	    int ll_rows = rows / (1 << max_level); // Ex: R/32
+	    int ll_cols = cols / (1 << max_level); // Ex: C/32
+
+	    // 1. LL5 : Lecture en Raster Scan (pour les coefficients DC/LL5)
+	    for (int r = 0; r < ll_rows; r++) {
+	        for (int c = 0; c < ll_cols; c++) {
+	            coeffs.add((int) Math.rint(image[r][c]));
+	        }
+	    }
+
+	    // --- B. Traitement des Bandes de Détail (AC) : du niveau L=5 au niveau L=1 ---
+	    // L'ordre peut être ajusté, ici L=5 (coarsest) à L=1 (finest)
+	    
+	    for (int L = max_level; L >= 1; L--) {
+	        // Taille de la sous-bande au niveau L (e.g., L=5 -> R/32 x C/32)
+	        int half_rows = rows / (1 << L);
+	        int half_cols = cols / (1 << L);
+
+	        // Taille de la région contenant LL(L-1) : R/2^(L-1) x C/2^(L-1)
+	        int size_rows = half_rows * 2;
+	        int size_cols = half_cols * 2;
+	        
+	        // 2. HL(L) band (Horizontal Low-pass / Vertical High-pass) - Détail Horizontal
+	        // Région: [half_rows..size_rows-1] x [0..half_cols-1]
+	        for (int r = half_rows; r < size_rows; r++) {
+	            for (int c = 0; c < half_cols; c++) {
+	                coeffs.add((int) Math.rint(image[r][c]));
+	            }
+	        }
+	        
+	        // 3. LH(L) band (Horizontal High-pass / Vertical Low-pass) - Détail Vertical
+	        // Région: [0..half_rows-1] x [half_cols..size_cols-1]
+	        for (int r = 0; r < half_rows; r++) {
+	            for (int c = half_cols; c < size_cols; c++) {
+	                coeffs.add((int) Math.rint(image[r][c]));
+	            }
+	        }
+	        
+	        // 4. HH(L) band (Diagonal Detail) - Détail Diagonal
+	        // Région: [half_rows..size_rows-1] x [half_cols..size_cols-1]
+	        for (int r = half_rows; r < size_rows; r++) {
+	            for (int c = half_cols; c < size_cols; c++) {
+	                coeffs.add((int) Math.rint(image[r][c]));
+	            }
+	        }
+	    }
+	    
+	    return coeffs;
+	}
+	
+
+	/**
+	 * Reconstruit la matrice de coefficients 2D (float[][]) à partir 
+	 * de la séquence 1D (List<Integer>), en suivant l'ordre inverse de linearizeDWT.
+	 * * @param coefficients Liste 1D des coefficients entiers décodés.
+	 * @param image Matrice de destination float[][] (imageY, imageCr, ou imageCb).
+	 */
+	private void unlinearizeDWT(List<Integer> coefficients, float[][] image) {
+	    if (image.length == 0 || coefficients.isEmpty()) return;
+	    
+	    int rows = image.length;
+	    int cols = image[0].length;
+	    int max_level = 5; // Supposant 5 niveaux de décomposition
+	    int index = 0;     // Index de lecture dans la liste 1D
+	    
+	    // --- A. Reconstruction du Bloc d'Approximation Final (LL5) ---
+	    // Ordre : Raster Scan sur R/32 x C/32
+	    int ll_rows = rows / (1 << max_level);
+	    int ll_cols = cols / (1 << max_level);
+
+	    for (int r = 0; r < ll_rows; r++) {
+	        for (int c = 0; c < ll_cols; c++) {
+	            // Lecture de l'entier et écriture dans le tableau float
+	            image[r][c] = (float) coefficients.get(index++);
+	        }
+	    }
+
+	    // --- B. Reconstruction des Bandes de Détail (AC) : du niveau L=5 au niveau L=1 ---
+	    // L'ordre est L=5 à L=1, avec le même ordre d'itération que dans linearizeDWT.
+	    
+	    for (int L = max_level; L >= 1; L--) {
+	        int half_rows = rows / (1 << L);
+	        int half_cols = cols / (1 << L);
+
+	        int size_rows = half_rows * 2;
+	        int size_cols = half_cols * 2;
+	        
+	        // 2. HL(L) band - Détail Horizontal
+	        // Région: [half_rows..size_rows-1] x [0..half_cols-1]
+	        for (int r = half_rows; r < size_rows; r++) {
+	            for (int c = 0; c < half_cols; c++) {
+	                image[r][c] = (float) coefficients.get(index++);
+	            }
+	        }
+	        
+	        // 3. LH(L) band - Détail Vertical
+	        // Région: [0..half_rows-1] x [half_cols..size_cols-1]
+	        for (int r = 0; r < half_rows; r++) {
+	            for (int c = half_cols; c < size_cols; c++) {
+	                image[r][c] = (float) coefficients.get(index++);
+	            }
+	        }
+	        
+	        // 4. HH(L) band - Détail Diagonal
+	        // Région: [half_rows..size_rows-1] x [half_cols..size_cols-1]
+	        for (int r = half_rows; r < size_rows; r++) {
+	            for (int c = half_cols; c < size_cols; c++) {
+	                image[r][c] = (float) coefficients.get(index++);
+	            }
+	        }
+	    }
+	}
+	
 	// ---------------------------------------------------------------------------------
 	public int inputCode(BinaryInputStream bis) throws Exception {
 		int code = 0;
@@ -413,7 +361,7 @@ public class DCT {
 			// 1 : Huffman mode
 
 			if (code == 257) {
-				System.out.print("out of range ");
+				//System.out.println("out of range 257");
 				code = bis.readBit((int) (10 + N / 8)) - 128 * N;
 			} else
 				code = code - 128;
@@ -436,6 +384,7 @@ public class DCT {
 	}
 
 	// ---------------------------------------------------------------------------------
+	@SuppressWarnings("rawtypes")
 	public void compressFile(String inFile, String outFile) throws Exception {
 		try {
 			int row, col, i, j, k;
@@ -487,14 +436,9 @@ public class DCT {
 			bos.writeBit(COLS, 16);
 			bos.writeBit(ROWS, 16);
 
-			imageY = new int[ROWS][COLS];
-			imageCr = new int[ROWS][COLS];
-			imageCb = new int[ROWS][COLS];
-
-			initialyze();
-
 			int blue, green, red, y, cb, cr;
-
+		
+			
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
 
@@ -506,82 +450,37 @@ public class DCT {
 					cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
 					cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
 					
-					imageY[row][col] = y - 128;
-					imageCr[row][col] = cr;
-					imageCb[row][col] = cb;
+					SimpleDWT.imageY[row][col] = y - 128;
+					SimpleDWT.imageCr[row][col] = cr;
+					SimpleDWT.imageCb[row][col] = cb;
 
 				}
 			}
-
-			for (row = 0; row < ROWS; row += N) {
-				for (col = 0; col < COLS; col += N) {
-
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-							inputY[i][j] = imageY[row + i][col + j];
-						}
-					}
-
-					forwardDCT(inputY, outputY);
-
-	
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						outputY[i][j] =
-							(int) Math.round(outputY[i][j] / quantumY[i][j]);
-
-						if (k == 0)
-							encodingDC = true;
-						outputCode(bos, outputY[i][j]);
-					}
-				}
+			
+			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
+			System.out.println("Encodage coefficientsY");
+			for (i = 0; i < coefficientsY.size(); i++) {
+				if (i == 0) encodingDC = true;
+				int val_lue = coefficientsY.get(i);
+				outputCode(bos, val_lue);
 			}
 
-			for (row = 0; row < ROWS; row += 2 * N) {
-				for (col = 0; col < COLS; col += 2 * N) {
-
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-
-							inputCr[i][j] = (int) ((imageCr[row	+ 2*i][col + 2*j] 
-									+ imageCr[row + 2*i + 1][col + 2*j]
-									+ imageCr[row + 2*i][col + 2*j + 1] 
-									+ imageCr[row + 2*i + 1][col + 2*j+ 1]) / 4);
-
-							inputCb[i][j] = (int) ((imageCb[row	+ 2*i][col + 2*j] 
-									+ imageCb[row + 2*i + 1][col + 2*j]	
-									+ imageCb[row + 2*i][col + 2*j + 1]	
-									+ imageCb[row + 2*i + 1][col + 2*j + 1]) / 4);
-
-						}
-					}
-
-					forwardDCT(inputCr, outputCr);
-
-					forwardDCT(inputCb, outputCb);
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						outputCr[i][j] = (int) Math.round(outputCr[i][j] / quantumCrCb[i][j]);
-
-						if (k == 0) encodingDC = true;
-						outputCode(bos, outputCr[i][j]);
-					}
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-						outputCb[i][j] = (int) Math.round(outputCb[i][j] / quantumCrCb[i][j]);
-
-						if (k == 0)	encodingDC = true;
-						outputCode(bos, outputCb[i][j]);
-					}
-
-				}
+			System.out.println("Encodage coefficientsCr");
+			List<Integer> coefficientsCr = linearizeDWT(SimpleDWT.imageCr); 
+			for (i = 0; i < coefficientsCr.size(); i++) {
+				if (i == 0) encodingDC = true;
+				int val_lue = coefficientsCr.get(i);
+				outputCode(bos, val_lue);
 			}
-	
+
+			System.out.println("Encodage coefficientsCb");
+			List<Integer> coefficientsCb = linearizeDWT(SimpleDWT.imageCb); 
+			for (i = 0; i < coefficientsCb.size(); i++) {
+				if (i == 0) encodingDC = true;
+				int val_lue = coefficientsCb.get(i);
+				outputCode(bos, val_lue);
+			}
+			
 			outputCodeFlush(bos);
 
 			bis.close();
@@ -602,7 +501,6 @@ public class DCT {
 				}
 			}
 			sort(list_rle, 0, list_rle.size() - 1);
-
 
 			// build the huffman tree
 			for (i = 0; i < maxBits; i++) {
@@ -655,7 +553,7 @@ public class DCT {
 				}
 			}
 
-
+			
 			for (i = 0; i < maxBits; i++) {
 				count[i] = 0;
 				next_code[i] = 0;
@@ -705,7 +603,7 @@ public class DCT {
 				}
 			}
 
-
+			
 			boolean mode_rle = false;
 			int compteur_rle = 0;
 
@@ -777,7 +675,8 @@ public class DCT {
 				mode_rle = false;
 				compteur_rle = 0;
 			}
-
+			
+		
 			MatchLength len = null;
 
 			BinaryTree node_len = null;
@@ -786,8 +685,9 @@ public class DCT {
 			// next, write contains of the "gen" vector into the output file
 			for (Enumeration e = gen.elements(); e.hasMoreElements();) {
 				len = (MatchLength) e.nextElement();
-
+				
 				if (len.value == 256) {
+								
 					node_len = tabStatistics_len[len.value];
 					bos.writeBit(node_len.compressCode, node_len.nbBits);
 
@@ -796,6 +696,7 @@ public class DCT {
 					node_rle = tabStatistics_rle[len.value];
 					bos.writeBit(node_rle.compressCode, node_rle.nbBits);
 				} else {
+					
 					node_len = tabStatistics_len[len.value];
 					bos.writeBit(node_len.compressCode, node_len.nbBits);
 
@@ -806,7 +707,9 @@ public class DCT {
 					}
 				}
 			}
-
+			
+			//System.out.println("compress tabStatistics_rle="+tabStatistics_rle.length);
+			
 			bos.writeEOF();
 
 			bos.flush();
@@ -817,6 +720,123 @@ public class DCT {
 		}
 	}
 
+	
+	public void encodeFile(String inFile, String outFile) throws Exception {
+		try {
+			int row, col, i, j, k;
+			
+			FileInputStream fis = new FileInputStream(inFile);
+			BinaryInputStream bis = new BinaryInputStream(new BufferedInputStream(fis));
+
+			FileOutputStream fos = new FileOutputStream(outFile);
+			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
+
+			tabStatistics_len = new BinaryTree[len_max];
+			for (i = 0; i < len_max; i++) {
+				tabStatistics_len[i] = new BinaryTree(i, 0);
+			}
+
+			tabStatistics_rle = new BinaryTree[rle_max];
+			for (i = 0; i < rle_max; i++) {
+				tabStatistics_rle[i] = new BinaryTree(i, 0);
+			}
+
+			gen = new Vector(fis.available(), 100000);
+
+
+			// Reading the input BMP imagefile
+			int p;
+
+			// BitmapFileHeader (14 bytes)
+			
+			if ((bis.readByte() != (byte) 'B') || (bis.readByte() != (byte) 'M')) throw new Exception("Not a Bitmap file"); // header = 'BM' (2 bytes)
+			p = bis.readBit(32); // BMP file size (4 bytes)
+			p = bis.readBit(64); // Reserved & Offset (8 bytes)
+
+			// BitmapInfoHeader (40 bytes)
+
+			p = bis.readBit(32); // info header size = 40 (4 bytes)
+			COLS = bis.readBit(32); // width (4 bytes)
+			ROWS = bis.readBit(32); // height (4 bytes)
+			p = bis.readBit(16); // planes = 1 (2 bytes)
+			p = bis.readBit(16); // bitcount = 24 (2 bytes)
+			if (p != 24) throw new Exception("Not a 24bits Bitmap file");
+			p = bis.readBit(32); // compression = 0 (4 bytes)
+			p = bis.readBit(32); // image size (4 bytes)
+			p = bis.readBit(32); // parameters (4 bytes)
+			p = bis.readBit(32); // parameters (4 bytes)
+			p = bis.readBit(32); // parameters (4 bytes)
+			p = bis.readBit(32); // parameters (4 bytes)
+
+
+			bos.writeBit(COLS, 16);
+			bos.writeBit(ROWS, 16);
+
+			SimpleDWT.imageY = new float[ROWS][COLS];
+			SimpleDWT.imageCr = new float[ROWS][COLS];
+			SimpleDWT.imageCb = new float[ROWS][COLS];
+
+			int blue, green, red, y, cb, cr;
+		
+			
+			for (row = ROWS - 1; row >= 0; row--) {
+				for (col = 0; col < COLS; col++) {
+
+					blue = bis.readBit(8);
+					green = bis.readBit(8);
+					red = bis.readBit(8);
+
+					y = (int) (0.299 * red + 0.587 * green + 0.114 * blue);
+					cb = (int) (-0.1687 * red - 0.3313 * green + 0.5 * blue); // cb = (int) (0.564*(blue - y));
+					cr = (int) (0.5 * red - 0.41874 * green - 0.08130 * blue); // cr = (int) (0.713*(red - y));
+					
+					SimpleDWT.imageY[row][col] = y - 128;
+					SimpleDWT.imageCr[row][col] = cr;
+					SimpleDWT.imageCb[row][col] = cb;
+
+				}
+			}
+			
+			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
+			System.out.println("Encodage coefficientsY");
+			for (i = 0; i < coefficientsY.size(); i++) {
+				if (i == 0) encodingDC = true;
+				Integer val_lue = coefficientsY.get(i);
+				//outputCode(bos, val_lue);
+				bos.writeBit(coefficientsY.get(i).byteValue());
+			}
+
+			System.out.println("Encodage coefficientsCr");
+			List<Integer> coefficientsCr = linearizeDWT(SimpleDWT.imageCr); 
+			for (i = 0; i < coefficientsCr.size(); i++) {
+				if (i == 0) encodingDC = true;
+				Integer val_lue = coefficientsCr.get(i);
+				//outputCode(bos, val_lue);
+				bos.writeBit(val_lue.byteValue());
+			}
+
+			System.out.println("Encodage coefficientsCb");
+			List<Integer> coefficientsCb = linearizeDWT(SimpleDWT.imageCb); 
+			for (i = 0; i < coefficientsCb.size(); i++) {
+				if (i == 0) encodingDC = true;
+				Integer val_lue = coefficientsCb.get(i);
+				//outputCode(bos, val_lue);
+				bos.writeBit(val_lue.byteValue());
+			}
+			
+			outputCodeFlush(bos);
+
+			bis.close();		
+			bos.writeEOF();
+
+			bos.flush();
+		} catch (EOFException e) {
+			System.out.println(e);
+		} catch (IOException e) {
+			System.out.println("compressFile :" + e);
+		}
+	}
+	
 	// ---------------------------------------------------------------------------------
 	public void expandFile(String inFile, String outFile) throws Exception {
 		try {
@@ -830,8 +850,11 @@ public class DCT {
 
 			byte b = 0;
 
-			COLS = bis.readBit(16);	// System.out.println("COLS = " + COLS);
-			ROWS = bis.readBit(16); // System.out.println("ROWS = " + ROWS);
+			COLS = bis.readBit(16);	
+			ROWS = bis.readBit(16);
+			
+			//System.out.println("COLS="+COLS);
+			//System.out.println("ROWS="+ROWS);
 
 			// get statistics from input stream
 
@@ -852,7 +875,7 @@ public class DCT {
 
 			for (i = 0; i < len_max; i++) {
 				int value = bis.readBit(4);
-
+				
 				if (value == 0x00) {
 					i = i + bis.readBit(8);
 				} else {
@@ -864,7 +887,7 @@ public class DCT {
 					count[value]++;
 				}
 			}
-
+			
 			int code = 0;
 			count[0] = 0;
 			for (int bits = 1; bits < maxBits; bits++) {
@@ -881,6 +904,7 @@ public class DCT {
 				}
 			}
 
+			
 			// --------------------------------------------------------
 
 			for (i = 0; i < maxBits; i++) {
@@ -898,14 +922,14 @@ public class DCT {
 					count[value]++;
 				}
 			}
-
+			
 			code = 0;
 			count[0] = 0;
 			for (int bits = 1; bits < maxBits; bits++) {
 				code = (code + count[bits - 1]) << 1;
 				next_code[bits] = code;
 			}
-
+		
 			for (i = 0; i < rle_max; i++) {
 				int len = tabStatistics_rle[i].nbBits;
 				if (len != 0) {
@@ -914,11 +938,12 @@ public class DCT {
 					next_code[len]++;
 				}
 			}
+			
+			//System.out.println("expand tabStatistics_rle="+tabStatistics_rle.length);
 
-
-			imageY = new int[ROWS][COLS];
-			imageCr = new int[ROWS][COLS];
-			imageCb = new int[ROWS][COLS];
+			SimpleDWT.imageY = new float[ROWS][COLS];
+			SimpleDWT.imageCr = new float[ROWS][COLS];
+			SimpleDWT.imageCb = new float[ROWS][COLS];
 
 			// 14 bytes
 			bos.writeByte((byte) 'B');
@@ -950,91 +975,41 @@ public class DCT {
 			bos.writeBit(0, 32);
 
 
-			initialyze();
-
-			int blue, green, red, y, cb, cr;
-
-			for (row = 0; row < ROWS; row += N) {
-				for (col = 0; col < COLS; col += N) {
-
-					/*
-					for (i=0; i<N ; i++) {
-						for (j=0; j<N ; j++) {
-							inputY[i][j] = bis.readBit(11) - 1024;
-							inputY[i][j] = (int) Math.round(inputY[i][j] * quantumY[i][j]);
-						}
-					}
-					*/
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-
-						if (k == 0) encodingDC = true;
-						inputY[i][j] = inputCode(bis);
-						inputY[i][j] = (int) Math.round(inputY[i][j] * quantumY[i][j]);
-					}
-
-					inverseDCT(inputY, outputY);
-
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-							imageY[row + i][col + j] = outputY[i][j];
-						}
-					}
-				}
+			int blue, green, red;
+			float y, cb, cr;
+			
+			List<Integer> coefficientsY = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				if (k == 0) encodingDC = true;
+				
+				int val_lue = inputCode(bis);
+				coefficientsY.add(k,val_lue);
 			}
-
-			for (row = 0; row < ROWS; row += 2 * N) {
-				for (col = 0; col < COLS; col += 2 * N) {
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-
-						if (k == 0) encodingDC = true;
-						inputCr[i][j] = inputCode(bis);
-						inputCr[i][j] = (int) Math.round(inputCr[i][j] * quantumCrCb[i][j]);
-					}
-
-					for (k = 0; k < N * N; k++) {
-						i = zigzag(k).col;
-						j = zigzag(k).row;
-
-						if (k == 0)
-							encodingDC = true;
-						inputCb[i][j] = inputCode(bis);
-						inputCb[i][j] = (int) Math.round(inputCb[i][j] * quantumCrCb[i][j]);
-					}
-
-					inverseDCT(inputCr, outputCr);
-
-					inverseDCT(inputCb, outputCb);
-
-					for (i = 0; i < N; i++) {
-						for (j = 0; j < N; j++) {
-
-							imageCr[row + 2 * i][col + 2 * j] = outputCr[i][j];
-							imageCr[row + 2 * i][col + 2 * j + 1] = outputCr[i][j];
-							imageCr[row + 2 * i + 1][col + 2 * j] = outputCr[i][j];
-							imageCr[row + 2 * i + 1][col + 2 * j + 1] = outputCr[i][j];
-
-							imageCb[row + 2 * i][col + 2 * j] = outputCb[i][j];
-							imageCb[row + 2 * i][col + 2 * j + 1] = outputCb[i][j];
-							imageCb[row + 2 * i + 1][col + 2 * j] = outputCb[i][j];
-							imageCb[row + 2 * i + 1][col + 2 * j + 1] = outputCb[i][j];
-
-						}
-					}
-				}
+			unlinearizeDWT(coefficientsY, SimpleDWT.imageY);
+			
+			List<Integer> coefficientsCr = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				if (k == 0) encodingDC = true;
+				int val_lue = inputCode(bis);
+				coefficientsCr.add(k,val_lue);
 			}
-
+			unlinearizeDWT(coefficientsCr, SimpleDWT.imageCr);
+			
+			List<Integer> coefficientsCb = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				if (k == 0) encodingDC = true;
+				int val_lue = inputCode(bis);
+				coefficientsCb.add(k,val_lue);
+			}
+			unlinearizeDWT(coefficientsCb, SimpleDWT.imageCb);
+			
+	
 			for (row = ROWS - 1; row >= 0; row--) {
 				for (col = 0; col < COLS; col++) {
 
-					y = imageY[row][col] + 128;
-					cr = imageCr[row][col];
-					cb = imageCb[row][col];
+					y = SimpleDWT.imageY[row][col] + 128;
+					cr = SimpleDWT.imageCr[row][col];
+					cb = SimpleDWT.imageCb[row][col];
 
 					blue = round_byte(y + 1.773 * cb);
 					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
@@ -1053,72 +1028,123 @@ public class DCT {
 		catch (EOFException e) {}
 		catch (IOException e) {System.out.println("expandFile :" + e);}
 
-		exportBMP_RGB("RGB_"+outFile);
+		//exportBMP_RGB("RGB_"+outFile);
 	}
 
+	
+	public void decodeFile(String inFile, String outFile) throws Exception {
+		try {
+			int row, col, i, j, k;
+
+			FileInputStream fis = new FileInputStream(inFile);
+			BinaryInputStream bis =	new BinaryInputStream(new BufferedInputStream(fis));
+
+			FileOutputStream fos = new FileOutputStream(outFile);
+			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
+
+			byte b = 0;
+
+			COLS = bis.readBit(16);	
+			ROWS = bis.readBit(16);
+			
+			//System.out.println("COLS="+COLS);
+			//System.out.println("ROWS="+ROWS);
+
+			SimpleDWT.imageY = new float[ROWS][COLS];
+			SimpleDWT.imageCr = new float[ROWS][COLS];
+			SimpleDWT.imageCb = new float[ROWS][COLS];
+
+			// 14 bytes
+			bos.writeByte((byte) 'B');
+			bos.writeByte((byte) 'M');
+			bos.writeBit(COLS * ROWS * 3 + 54, 32); // BMP file length
+
+			bos.writeBit(0, 32); // Reserved
+			bos.writeByte((byte) 54); // Offset
+			bos.writeByte((byte) 0);
+			bos.writeByte((byte) 0);
+			bos.writeByte((byte) 0);
+
+			// 40 bytes
+			bos.writeBit(40, 32); // 40 bytes
+			bos.writeBit(COLS, 32); // largeur
+			bos.writeBit(ROWS, 32); // hauteur
+			bos.writeBit(1, 16);
+
+
+			bos.writeBit(24, 16); // bits by pixel
+
+			bos.writeBit(0, 32);
+
+			bos.writeBit(COLS * ROWS * 3, 32); // image size
+
+			bos.writeBit(0, 32);
+			bos.writeBit(0, 32);
+			bos.writeBit(0, 32);
+			bos.writeBit(0, 32);
+
+
+			int blue, green, red;
+			float y, cb, cr;
+			
+			List<Integer> coefficientsY = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				//if (k == 0) encodingDC = true;
+				//coefficientsY.add(k,inputCode(bis));
+				int val_lue = bis.readBit();
+				coefficientsY.add(k,val_lue);
+			}
+			unlinearizeDWT(coefficientsY, SimpleDWT.imageY);
+			
+			List<Integer> coefficientsCr = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				//if (k == 0) encodingDC = true;
+				//coefficientsCr.add(k,inputCode(bis));
+				int val_lue = bis.readBit();
+				coefficientsCr.add(k,val_lue);
+			}
+			unlinearizeDWT(coefficientsCr, SimpleDWT.imageCr);
+			
+			List<Integer> coefficientsCb = new ArrayList();
+			for(k=0; k<COLS * ROWS; k++ ) {
+				//if (k == 0) encodingDC = true;
+				//coefficientsCb.add(k,inputCode(bis));
+				int val_lue = bis.readBit();
+				coefficientsCb.add(k,val_lue);
+			}
+			unlinearizeDWT(coefficientsCb, SimpleDWT.imageCb);
+			
+			
+	
+			for (row = ROWS - 1; row >= 0; row--) {
+				for (col = 0; col < COLS; col++) {
+
+					y = SimpleDWT.imageY[row][col] + 128;
+					cr = SimpleDWT.imageCr[row][col];
+					cb = SimpleDWT.imageCb[row][col];
+
+					blue = round_byte(y + 1.773 * cb);
+					green = round_byte(y - 0.34414 * cb - 0.71414 * cr);
+					red = round_byte(y + 1.402 * cr);
+
+					bos.writeBit(blue, 8);
+					bos.writeBit(green, 8);
+					bos.writeBit(red, 8);
+				}
+			}
+
+			bos.flush();
+			fos.close();
+			fis.close();
+		} 
+		catch (EOFException e) {}
+		catch (IOException e) {System.out.println("expandFile :" + e);}
+
+		//exportBMP_RGB("RGB_"+outFile);
+	}
+	
 	// ---------------------------------------------------------------------------------
 
-	public void exportBMP_RGB(String name) throws Exception
-	{
-		int row, col;
-		int blue, green, red;
-		float y, cb, cr;
-
-		FileOutputStream fos = new FileOutputStream(name + ".bmp");
-		BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
-
-		// 14 bytes
-		bos.writeByte((byte) 'B');
-		bos.writeByte((byte) 'M');
-		bos.writeBit(COLS * ROWS * 3 + 54, 32); // BMP file length
-
-		bos.writeBit(0, 32); // Reserved
-		bos.writeByte((byte) 54); // Offset
-		bos.writeByte((byte) 0);
-		bos.writeByte((byte) 0);
-		bos.writeByte((byte) 0);
-
-		// 40 bytes
-		bos.writeBit(40, 32); // 40 bytes
-		bos.writeBit(COLS, 32); // largeur
-		bos.writeBit(ROWS, 32); // hauteur
-		bos.writeBit(1, 16);
-
-
-		bos.writeBit(24, 16); // bits by pixel
-
-		bos.writeBit(0, 32);
-
-		bos.writeBit(COLS * ROWS * 3, 32); // image size
-
-		bos.writeBit(0, 32);
-		bos.writeBit(0, 32);
-		bos.writeBit(0, 32);
-		bos.writeBit(0, 32);
-
-		for (row = ROWS - 1; row >= 0; row--) {
-			for (col = 0; col < COLS; col++) {
-			
-				y = (float) (imageY[row][col] + 128.0f);
-				//cr = (float) (imageCr[row][col] - 32.0f);
-				//cb = (float) (imageCb[row][col] - 16.0f);
-				cr = (float) (imageCr[row][col] );
-				cb = (float) (imageCb[row][col] );
-	
-				blue = round_byte(y + 1.772f * cb);
-				green = round_byte(y - 0.34414f * cb - 0.71414f * cr);
-				red = round_byte(y + 1.402f * cr);
-
-				bos.writeBit(blue, 8);
-				bos.writeBit(green, 8);
-				bos.writeBit(red, 8);
-			}
-		}
-
-		bos.flush();
-		fos.close();
-
-	}
 
 // -------------------------------------------------------------------------------------------
 	public int reverse(int value, int size) 
@@ -1205,92 +1231,5 @@ public class DCT {
 		}
 	}
 
-	// ---------------------------------------------------------------------------------------------
-
-	static public void help() 
-	{
-		System.out.println("DCT 1.1 powered by Ronan Merien <rmerien@hotmail.com>");
-		System.out.println("under the LGPL open source licence");
-		System.out.println("[YCbCr 4:2:2, DCT 8*8, quantization, zigzag sequence, RLE & Huffman]");
-		System.out.println("Usage: java DCT [options] imagefile");
-		System.out.println("-c		compress bmp_to_dctfile");
-		System.out.println("-e		expand dct_to_bmpfile");
-		System.out.println();
-		//System.out.println("-quality n	quality factor between 1 and 100 (default 20)");
-		System.out.println("Examples:  java DCT -c photo.bmp");
-		System.out.println("           java DCT -e photo.dct");
-		System.out.println("");
-	}
-
-	static public void main(String args[]) 
-	{
-		String option = "";
-		String imagefile = "";
-
-		int argc = args.length;
-		int argIndex = 0;
-		String arg;
-
-		while (argc > 0) {
-			arg = args[argIndex];
-
-			if (arg.startsWith("-")) {
-
-				if (arg.equals("-quality")) {
-					--argc;
-					++argIndex;
-					arg = args[argIndex];
-					int p = Integer.parseInt(arg);
-					if ((p >= 1) && (p <= 100)) {
-						DCT.quality = p / 10;
-					}
-				}
-				else option = arg;
-			
-			} 
-			else if (imagefile.equals("")) {
-				imagefile = arg;
-			}
-
-			--argc;
-			++argIndex;
-		}
-
-		if (imagefile.indexOf(".") != -1) {
-			StringTokenizer f = new StringTokenizer(imagefile, ".");
-			imagefile = f.nextToken();
-		}
-
-		DCT trans = new DCT();
-
-		// compress bmp_to_dctfile 
-		if (option.equals("-c")) 
-		{
-			System.out.println("compress " + imagefile + ".bmp to " + imagefile + ".dct");
-
-			try {	
-				trans.compressFile(imagefile + ".bmp", imagefile + ".dct"); 
-			} 
-			catch (Exception e) { System.out.println(e); }
-
-		}
-
-		// expand dct_to_bmpfile
-		else if (option.equals("-e")) 
-		{
-			System.out.println("expand " + imagefile + ".dct to " + imagefile + ".idct.bmp");
-			
-			try {
-				trans.expandFile(imagefile + ".dct", imagefile + ".idct.bmp");
-			}
-			catch (Exception e) { System.out.println(e); }
-			
-		}
-
-		// help instructions 
-		else {
-			help();
-		}
-	}
 
 }
