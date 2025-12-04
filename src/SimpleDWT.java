@@ -409,7 +409,7 @@ public class SimpleDWT {
 			
 			Huffman trans = new Huffman();
 			trans.compressFile(inFile+".dwt");
-/*			
+		
 			trans.expandFile(inFile+".dwt");
 		
 			dequantizeAllSubbands();
@@ -442,7 +442,7 @@ public class SimpleDWT {
 		    }
 
 		    exportBMP_RGB("expand0");
-*/
+
 		} catch (Exception e) {
 			System.out.println(e);
 		}

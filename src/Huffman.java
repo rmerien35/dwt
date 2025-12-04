@@ -445,6 +445,13 @@ public class Huffman {
 			
 			FileOutputStream fos = new FileOutputStream(outFile);
 			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
+			
+			inputRLE = 0;
+			outputRLE = 0;
+
+			previousDC = 0;
+			nextDC = 0;
+			encodingDC = false;
 
 			tabStatistics_len = new BinaryTree[len_max];
 			for (i = 0; i < len_max; i++) {
@@ -735,6 +742,13 @@ public class Huffman {
 
 			FileInputStream fis = new FileInputStream(inFile);
 			BinaryInputStream bis =	new BinaryInputStream(new BufferedInputStream(fis));
+			
+			inputRLE = 0;
+			outputRLE = 0;
+
+			previousDC = 0;
+			nextDC = 0;
+			encodingDC = false;
 
 			SimpleDWT.COLS = bis.readBit(16);	
 			SimpleDWT.ROWS = bis.readBit(16);
