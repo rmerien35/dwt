@@ -290,62 +290,6 @@ public class Huffman {
 	    }
 	}
 	
-	private List<Integer> linearizeDWTWithZigzag(float[][] dwtCoefficients) {
-	    List<Integer> coeffs = new ArrayList<>();
-	    int rows = dwtCoefficients.length;
-	    int cols = dwtCoefficients[0].length;
-	    int maxLevel = 5;
-	    
-	    // LL5 - scan normal
-	    int llSize = rows / 32;
-	    for (int r = 0; r < llSize; r++) {
-	        for (int c = 0; c < llSize; c++) {
-	            coeffs.add(Math.round(dwtCoefficients[r][c]));
-	        }
-	    }
-	    
-	    // Pour chaque sous-bande de détail, utiliser zigzag
-	    for (int level = maxLevel; level >= 1; level--) {
-	        int blockSize = rows / (1 << level);
-	        
-	        // HL band
-	        coeffs.addAll(zigzagScan(dwtCoefficients, blockSize, 2*blockSize, 0, blockSize));
-	        
-	        // LH band  
-	        coeffs.addAll(zigzagScan(dwtCoefficients, 0, blockSize, blockSize, 2*blockSize));
-	        
-	        // HH band
-	        coeffs.addAll(zigzagScan(dwtCoefficients, blockSize, 2*blockSize, blockSize, 2*blockSize));
-	    }
-	    
-	    return coeffs;
-	}
-
-	private List<Integer> zigzagScan(float[][] matrix, int startRow, int endRow, 
-	                                 int startCol, int endCol) {
-	    List<Integer> scan = new ArrayList<>();
-	    int rows = endRow - startRow;
-	    int cols = endCol - startCol;
-	    int row = 0, col = 0;
-	    boolean up = true;
-	    
-	    for (int i = 0; i < rows * cols; i++) {
-	        scan.add(Math.round(matrix[startRow + row][startCol + col]));
-	        
-	        if (up) {
-	            if (col == cols - 1) { row++; up = false; }
-	            else if (row == 0) { col++; up = false; }
-	            else { row--; col++; }
-	        } else {
-	            if (row == rows - 1) { col++; up = true; }
-	            else if (col == 0) { row++; up = true; }
-	            else { row++; col--; }
-	        }
-	    }
-	    
-	    return scan;
-	}
-	
 	// ---------------------------------------------------------------------------------
 	public int inputCode(BinaryInputStream bis) throws Exception {
 		int code = 0;
@@ -441,7 +385,7 @@ public class Huffman {
 	@SuppressWarnings("rawtypes")
 	public void compressFile(String outFile) throws Exception {
 		try {
-			int row, col, i, j, k;
+			int i, k;
 			
 			FileOutputStream fos = new FileOutputStream(outFile);
 			BinaryOutputStream bos = new BinaryOutputStream(new BufferedOutputStream(fos));
@@ -468,8 +412,6 @@ public class Huffman {
 			bos.writeBit(SimpleDWT.COLS, 16);
 			bos.writeBit(SimpleDWT.ROWS, 16);
 			//outputCodeFlush(bos);
-
-			int blue, green, red, y, cb, cr;
 					
 			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
 			System.out.println("Encodage coefficientsY");

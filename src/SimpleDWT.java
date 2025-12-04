@@ -26,8 +26,12 @@ public class SimpleDWT {
 	//static private float[] QUANT_MASK_Y    = {2.0f, 4.0f, 6.0f, 8.0f, 10.0f, 12.0f};
 	//static private float[] QUANT_MASK_CRCB = {8.0f, 10.0f, 12.0f, 14.0f, 18.0f, 22.0f};
 
-	static private float[] QUANT_MASK_Y    = {4.0f, 6.0f, 8.0f, 12.0f, 16.0f, 20.0f};
-	static private float[] QUANT_MASK_CRCB = {12.0f, 16.0f, 20.0f, 24.0f, 30.0f, 36.0f};
+	//static private float[] QUANT_MASK_Y    = {4.0f, 6.0f, 8.0f, 12.0f, 16.0f, 20.0f};
+	//static private float[] QUANT_MASK_CRCB = {12.0f, 16.0f, 20.0f, 24.0f, 30.0f, 36.0f};
+	
+	static private float[] QUANT_MASK_Y = {5.0f, 8.0f, 12.0f, 16.0f, 20.0f, 25.0f};
+	static private float[] QUANT_MASK_CRCB = {15.0f, 20.0f, 25.0f, 30.0f, 40.0f, 50.0f};
+	
 	
 	/*
 	LL : factor = 1.0
