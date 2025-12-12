@@ -46,11 +46,11 @@ public class SimpleDWT {
 	
 	// x = i = row ; y = j = col
 
-	static float[][] imageY;
-	static float[][] imageCr;
-	static float[][] imageCb;
+	float[][] imageY;
+	float[][] imageCr;
+	float[][] imageCb;
 	
-	static double[][] dwtTemp;
+	double[][] dwtTemp;
 
 	float[][] C = new float[N][N];
 	float[][] Ct = new float[N][N];
@@ -412,7 +412,7 @@ public class SimpleDWT {
 			quantizeAllSubbands();
 			
 			Huffman trans = new Huffman();
-			trans.compressFile(inFile+".dwt");
+			trans.compressFile(inFile+".dwt", COLS, ROWS, imageY, imageCr, imageCb);
 		
 			trans.expandFile(inFile+".dwt");
 		

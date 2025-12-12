@@ -383,7 +383,7 @@ public class Huffman {
 
 	// ---------------------------------------------------------------------------------
 	@SuppressWarnings("rawtypes")
-	public void compressFile(String outFile) throws Exception {
+	public void compressFile(String outFile, int COLS, int ROWS, float[][] imageY, float[][] imageCr, float[][] imageCb) throws Exception {
 		try {
 			int i, k;
 			
@@ -409,11 +409,11 @@ public class Huffman {
 
 			gen = new Vector(100000, 100000);
 
-			bos.writeBit(SimpleDWT.COLS, 16);
-			bos.writeBit(SimpleDWT.ROWS, 16);
+			bos.writeBit(COLS, 16);
+			bos.writeBit(ROWS, 16);
 			//outputCodeFlush(bos);
 					
-			List<Integer> coefficientsY = linearizeDWT(SimpleDWT.imageY); 
+			List<Integer> coefficientsY = linearizeDWT(imageY); 
 			System.out.println("Encodage coefficientsY");
 			for (i = 0; i < coefficientsY.size(); i++) {
 				if (i == 0) encodingDC = true;
@@ -422,7 +422,7 @@ public class Huffman {
 			}
 
 			System.out.println("Encodage coefficientsCr");
-			List<Integer> coefficientsCr = linearizeDWT(SimpleDWT.imageCr); 
+			List<Integer> coefficientsCr = linearizeDWT(imageCr); 
 			for (i = 0; i < coefficientsCr.size(); i++) {
 				if (i == 0) encodingDC = true;
 				int val_lue = coefficientsCr.get(i);
@@ -430,7 +430,7 @@ public class Huffman {
 			}
 
 			System.out.println("Encodage coefficientsCb");
-			List<Integer> coefficientsCb = linearizeDWT(SimpleDWT.imageCb); 
+			List<Integer> coefficientsCb = linearizeDWT(imageCb); 
 			for (i = 0; i < coefficientsCb.size(); i++) {
 				if (i == 0) encodingDC = true;
 				int val_lue = coefficientsCb.get(i);
@@ -692,17 +692,17 @@ public class Huffman {
 			nextDC = 0;
 			encodingDC = false;
 
-			SimpleDWT.COLS = bis.readBit(16);	
-			SimpleDWT.ROWS = bis.readBit(16);
+			int COLS = bis.readBit(16);	
+			int ROWS = bis.readBit(16);
 			
-			System.out.println("COLS="+SimpleDWT.COLS);
-			System.out.println("ROWS="+SimpleDWT.ROWS);
+			System.out.println("COLS="+COLS);
+			System.out.println("ROWS="+ROWS);
 			
-			SimpleDWT.imageY = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
-			SimpleDWT.imageCr = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
-			SimpleDWT.imageCb = new float[SimpleDWT.ROWS][SimpleDWT.COLS];
+			float[][] imageY = new float[ROWS][COLS];
+			float[][] imageCr = new float[ROWS][COLS];
+			float[][] imageCb = new float[ROWS][COLS];
 			
-			SimpleDWT.dwtTemp = new double[SimpleDWT.ROWS][SimpleDWT.COLS];
+			double[][] dwtTemp = new double[ROWS][COLS];
 
 			// get statistics from input stream
 
@@ -790,32 +790,32 @@ public class Huffman {
 			//System.out.println("expand tabStatistics_rle="+tabStatistics_rle.length);
 
 			@SuppressWarnings("unchecked")
-			List<Integer> coefficientsY = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
-			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
+			List<Integer> coefficientsY = new ArrayList<Integer>(COLS * ROWS);
+			for(k=0; k<COLS * ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				
 				int val_lue = inputCode(bis);
 				coefficientsY.add(k,val_lue);
 			}
-			unlinearizeDWT(coefficientsY, SimpleDWT.imageY);
+			unlinearizeDWT(coefficientsY, imageY);
 			
 			@SuppressWarnings("unchecked")
-			List<Integer> coefficientsCr = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
-			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
+			List<Integer> coefficientsCr = new ArrayList<Integer>(COLS * ROWS);
+			for(k=0; k<COLS * ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				int val_lue = inputCode(bis);
 				coefficientsCr.add(k,val_lue);
 			}
-			unlinearizeDWT(coefficientsCr, SimpleDWT.imageCr);
+			unlinearizeDWT(coefficientsCr, imageCr);
 			
 			@SuppressWarnings("unchecked")
-			List<Integer> coefficientsCb = new ArrayList<Integer>(SimpleDWT.COLS * SimpleDWT.ROWS);
-			for(k=0; k<SimpleDWT.COLS * SimpleDWT.ROWS; k++ ) {
+			List<Integer> coefficientsCb = new ArrayList<Integer>(COLS * ROWS);
+			for(k=0; k<COLS * ROWS; k++ ) {
 				if (k == 0) encodingDC = true;
 				int val_lue = inputCode(bis);
 				coefficientsCb.add(k,val_lue);
 			}
-			unlinearizeDWT(coefficientsCb, SimpleDWT.imageCb);
+			unlinearizeDWT(coefficientsCb, imageCb);
 			
 			bis.close();
 			fis.close();
